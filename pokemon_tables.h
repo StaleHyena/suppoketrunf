@@ -1,6 +1,7 @@
 #ifndef POKETABLES_H__
 #define POKETABLES_H__
 #include <stdint.h>
+#include <stddef.h>
 #define True 1
 #define False 0
 
@@ -19,15 +20,6 @@
 #define IIF_1(t, ...) t
 
 #define OR_UNDEF(TYPE) IIF(IS_EMPTY(TYPE))(Undef, TYPE)
-
-#define X(ID, NAME, T1, T2, TOTAL, HP, ATK, DEF, SP_ATK, SP_DEF, SPEED, GEN, LEGENDARY) \
-  [__LINE__ - 1] = NAME,
-
-const char *pokemon_names[] = {
-#include "pokemon.h"
-};
-
-#undef X
 
 #define POKETYPES_LIST \
   X(Normal, 0) \
@@ -61,28 +53,15 @@ enum pokemon_types_t {
 
 #undef X
 
-const char *pokemon_type_repr_str(int type_id);
-
-#define X(ID, NAME, T1, T2, TOTAL, HP, ATK, DEF, SP_ATK, SP_DEF, SPEED, GEN, LEGENDARY) \
-  [__LINE__ - 1] = { T1, OR_UNDEF(T2) },
-
-enum pokemon_types_t pokemon_types[][2] = {
-  #include "pokemon.h"
-};
-
-#undef X
-
 typedef struct {
   int total, hp, attack, defense, sp_attack, sp_defense, speed, generation, legendary;
 } pokemon_stats_t;
 
-#define X(ID, NAME, T1, T2, TOTAL, HP, ATK, DEF, SP_ATK, SP_DEF, SPEED, GEN, LEGENDARY) \
-  [__LINE__ - 1] = (pokemon_stats_t) {TOTAL, HP, ATK, DEF, SP_ATK, SP_DEF, SPEED, GEN, LEGENDARY},
+const char *pokemon_type_repr_str(int type_id);
 
-pokemon_stats_t pokemon_stats[] = {
-  #include "pokemon.h"
-};
-
-#undef X
+extern const char *pokemon_names[];
+extern const size_t pokemon_ids[];
+extern enum pokemon_types_t pokemon_types[][2];
+extern pokemon_stats_t pokemon_stats[];
 
 #endif // POKETABLES_H__
