@@ -5,28 +5,8 @@
 
 btree *pokemon_hashed_names_btree;
 
-//uint32_t pokemon_hash_name(int uid) {
-//  const uint32_t hashlut[8] = {17,  13, 373, 197, 421, 179, 947, 509}; 
-//  const char *name = pokemon_names[uid];
-//
-//  uint32_t acc = 0;
-//  for (size_t i = 0; i < strlen(name); i++) {
-//    acc += name[i] * hashlut[name[i] & 7];
-//  }
-//  return acc;
-//}
-
-uint64_t powil(uint8_t base, uint8_t exp) {
-  uint64_t acc = 1;
-  while(exp) {
-    acc *= base;
-    exp--;
-  }
-  return acc;
-}
-
-uint64_t pokemon_hash_name(int uid) {
-  const char *og_name = pokemon_names[uid];
+uint64_t pokemon_hash_name(const char *name) {
+  const char *og_name = name;
   const ssize_t l = 11;
   const ssize_t namelen = strlen(og_name);
   // magic constants since no name is longer than 25 chars
@@ -69,7 +49,8 @@ void dyn_tables_init() {
   uint64_t *hashed_names = malloc(pokemon_count * sizeof(uint64_t));
 
   for (size_t i = 0; i < pokemon_count; i++) {
-    hashed_names[i + 0] = pokemon_hash_name(i) << 10 | i;
+    hashed_names[i + 0]
+      = pokemon_hash_name(pokemon_names[i]) << 10 | i;
   }
 
   qsort(

@@ -49,7 +49,7 @@ pokemon_stats_t pokemon_stats[] = {
 
 #define X(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13) + 1
 
-extern size_t pokemon_count = 0
+size_t pokemon_count = 0
   #include "pokemon.h"
 ;
 
