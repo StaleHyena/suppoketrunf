@@ -63,5 +63,6 @@ extern const char *pokemon_names[];
 extern const size_t pokemon_ids[];
 extern enum pokemon_types_t pokemon_types[][2];
 extern pokemon_stats_t pokemon_stats[];
+extern size_t pokemon_count;
 
 #endif // POKETABLES_H__

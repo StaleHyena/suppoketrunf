@@ -5,6 +5,7 @@
 #include <assert.h>
 #include "stack.h"
 #include "pokemon_tables.h"
+#include "pokemon_dyntables.h"
 #include "pokecards.h"
 #include "pokemon_ascii.h"
 
@@ -74,7 +75,7 @@ stack_t random_take_n(stack_t s, size_t num) {
     }
     int selv;
     s = stack_pop(s, &selv);
-    printf("needle %d: selv %d choice %d\n", needle, selv, choice & 0b1);
+    if (0) printf("needle %d: selv %d choice %d\n", needle, selv, choice & 0b1);
     if (choice & 0b1) {
       acc = stack_push(acc, selv);
       num--;
@@ -90,7 +91,15 @@ stack_t random_take_n(stack_t s, size_t num) {
   return acc;
 }
 
+void print_hash_tuple(btree *e) {
+  uint64_t hash = e->val >> 10;
+  uint32_t id = e->val & 0x3FF;
+
+  printf("hash %lu, id %u, name %s", hash, id, pokemon_names[id]);
+}
+
 int main(void) {
+  dyn_tables_init();
   srand(time(NULL));
   stack_t pokes = NULL;
   size_t num_of_pokes = 163;
@@ -110,6 +119,10 @@ int main(void) {
     print_pokemon(pokemon_ids[c]);
     printf("%s\n", pokecard_repr_simplestr_salloc(c));
   } while (pokes);
+
+  btree_print(pokemon_hashed_names_btree, print_hash_tuple);
+
+  dyn_tables_fini();
 
   return 0;
 }
