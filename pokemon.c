@@ -102,14 +102,13 @@ int main(void) {
   dyn_tables_init();
   srand(time(NULL));
   stack_t pokes = NULL;
-  size_t num_of_pokes = 163;
-  for (int i = 0; i < num_of_pokes; i++) {
+  for (int i = 0; i < pokemon_count; i++) {
     pokes = stack_push(pokes, i);
   }
 
-  pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, num_of_pokes);
-  pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, num_of_pokes);
-  pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, num_of_pokes);
+  pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, pokemon_count);
+  pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, pokemon_count);
+  pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, pokemon_count);
   pokes = random_take_n(pokes, 4);
 
   int c;

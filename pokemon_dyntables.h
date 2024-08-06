@@ -6,7 +6,7 @@
 
 extern btree *pokemon_hashed_names_btree;
 
-uint32_t pokemon_hash_name(int uid);
+uint64_t pokemon_hash_name(int uid);
 
 void dyn_tables_init();
 void dyn_tables_fini();

@@ -25,17 +25,19 @@ uint64_t powil(uint8_t base, uint8_t exp) {
   return acc;
 }
 
-uint32_t pokemon_hash_name(int uid) {
+uint64_t pokemon_hash_name(int uid) {
   const char *og_name = pokemon_names[uid];
   const ssize_t l = 11;
   const ssize_t namelen = strlen(og_name);
   // magic constants since no name is longer than 25 chars
-  static char trim[32] = {0};
+  static uint8_t trim[32] = {0};
   ssize_t trimlen = 0;
   for (size_t i = 0; i < namelen; i++) {
-    char x = og_name[i];
+    char x = tolower(og_name[i]);
     if ((x <= 'z' && x >= 'a') || x == ' ') {
-      trim[trimlen] = (x == ' ')? 0 : tolower(og_name[i]) - 'a' + 1;
+      trim[trimlen] = (x == ' ')? 0 : x - 'a' + 1;
+      //printf("trim[%zd] = ('%c' == ' ')? 0 : '%c' - 'a' + 1 = %hhu\n",
+      //    trimlen, x, x, trim[trimlen]);
       trimlen++;
     }
   }
@@ -46,10 +48,13 @@ uint32_t pokemon_hash_name(int uid) {
     int8_t exp = l - 1 - i;
     exp = (exp > 0)? exp : 0;
     // a..z = 26; +1 for the space
+    //printf("acc = %lu; acc += powil(27, %hhu) * %lu\n", acc, exp, c);
     acc += powil(27, exp) * c;
   }
   uint64_t loff = l - namelen;
+  //printf("acc = %lu; acc += %lu\n", acc, loff);
   acc += loff;
+  //printf("acc = %lu\n", acc);
   assert(acc < (uint64_t)1<<54); // bounds check
   return acc;
 }
