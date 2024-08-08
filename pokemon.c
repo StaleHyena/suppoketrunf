@@ -109,57 +109,75 @@ void print_bt_pokemon(btree *e) {
 
 #define HITLINEQ printf("hit line %d!\n", __LINE__)
 
-btree *btree_partial_search_inner(btree *bt, size_t btdepth, const char *buf, ssize_t buflen, size_t depth, uint64_t hash, size_t *cut_depth_out) {
-  if (!bt) return NULL;
-  if (depth >= btdepth) return NULL; // dove in too deep (think about the implications)
+typedef struct {
+  btree *r;
+  size_t depth;
+  size_t match_score;
+} btree_partial_search_result;
 
-  btree *next = (hash > (bt->val >> 10))? bt->r : bt->l;
-  btree *result = btree_partial_search_inner(next, btdepth, buf, buflen, depth + 1, hash, cut_depth_out);
-  if (!result) return bt;
+btree_partial_search_result
+btree_partial_search_inner(btree *bt, size_t bt_depth, const char *buf, ssize_t buflen, size_t depth, uint64_t hash) {
+  btree_partial_search_result r = {0};
 
-  // Now, on the deepest call frame, we have a leaf.
+  printf("%s call: bt %p, bt_depth %zu, buf %s, buflen %zd, depth %zu, hash %lu\n",
+      __func__, bt, bt_depth, buf, buflen, depth, hash
+    );
+  if (!bt) return r;
+  if (bt_depth == 0) return r; // dove in too deep (think about the implications)
+  
+  // On the deepest call frame, we have a leaf.
   // The path leading to this leaf can be unwound, looking
   // for the longest match to our query. It'll be propagated
   // through the return values.
 
-  const char *resname = pokemon_names[result->val & 0x3FF];
-  size_t resnamelen = strlen(resname);
-  const char *ourname = pokemon_names[bt->val & 0x3FF];
-  size_t ournamelen = strlen(ourname);
-  
-  if (resnamelen < buflen) { HITLINEQ; *cut_depth_out = depth; return bt; }
-  if (ournamelen < buflen) { HITLINEQ; return result; }
-
   ssize_t needle = 0;
+  volatile int32_t next_score = 0;
+  uint32_t id = bt->val & 0x3FF;
+
+  const char *n = pokemon_names[id];
+  size_t nlen = strlen(n);
+  
+  if (nlen < buflen) { return r; }
+
   for (needle = 0; needle < buflen; needle++) {
     char bufc = tolower(buf[needle]);
-    char res_matches = tolower(resname[needle]) == bufc;
-    char our_matches = tolower(ourname[needle]) == bufc;
-    if (!our_matches) return result;
-    else if (our_matches && !res_matches) {
-      *cut_depth_out = depth;
-      return bt; // ours is the bigger match
+    char c = tolower(n[needle]);
+    if (c == bufc) { r.match_score++; }
+  }
+
+  btree *next = (hash > (bt->val >> 10))? bt->r : bt->l;
+  btree_partial_search_result nres = btree_partial_search_inner(next, bt_depth - 1, buf, buflen, depth + 1, hash);
+  
+  r.r = bt;
+  r.depth = bt_depth;
+  if (nres.r) {
+    if (r.match_score >= nres.match_score) {
+      printf("\"%s\" achieved score %d, better than the old best %d!\n",
+          n, r.match_score, nres.match_score
+        );
+    } else {
+      r = nres;
     }
   }
-  return result;
+  return r;
 }
 
-btree *btree_partial_search(btree *bt, const char *buf, ssize_t buflen, size_t *depth_out) {
-  size_t pokemon_count_log2 = 0;
-  size_t acc = pokemon_count;
-  do {
-    acc /= 2;
-    pokemon_count_log2++;
-  } while(acc > 1);
-  size_t cut_depth = 0;
-  btree *r = btree_partial_search_inner(bt, pokemon_count_log2, buf, buflen, 0, pokemon_hash_name(buf), &cut_depth);
-  *depth_out = pokemon_count_log2 - cut_depth + 1;
+btree_partial_search_result
+btree_partial_search(btree *bt, size_t bt_depth, const char *buf, ssize_t buflen) {
+  btree_partial_search_result r = btree_partial_search_inner(
+      bt, bt_depth,
+      buf, buflen, 0, pokemon_hash_name(buf)
+  );
+
+  printf(">>> depth culled to %zd!\n", r.depth);
+  btree_print(r.r, print_hash_tuple);
+
   return r;
 }
 
 typedef struct { int take; uint64_t val; } visitor_result_t;
 void queue_from_btree_inner(btree *bt, visitor_result_t (*visitor)(uint64_t, void *), void *visitor_args, queue_t *out, size_t depth) {
-  printf("%s call: %p , depth %zu\n", __func__, bt, depth);
+  //printf("%s call: %p , depth %zu\n", __func__, bt, depth);
   if (!bt) return;
   
   queue_from_btree_inner(bt->l, visitor, visitor_args, out, depth + 1);
@@ -167,7 +185,7 @@ void queue_from_btree_inner(btree *bt, visitor_result_t (*visitor)(uint64_t, voi
   visitor_result_t this_visit = visitor(bt->val, visitor_args);
   if (this_visit.take) {
     *out = queue_insert(*out, this_visit.val);
-    printf("inserted %lu on queue\n", this_visit.val);
+    if (0) printf("inserted %lu on queue\n", this_visit.val);
   }
 
   queue_from_btree_inner(bt->r, visitor, visitor_args, out, depth + 1);
@@ -224,10 +242,14 @@ int main(void) {
     // remove newline
     if (buf[buflen-1] == '\n') buf[--buflen] = '\0';
 
-    size_t result_depth = 0;
-    btree *result = btree_partial_search(pokemon_hashed_names_btree, buf, buflen, &result_depth);
-    visitor_poke_starts_with_args_t va = {buf, 1};
-    queue_t res_q = queue_from_btree(result, result_depth, visitor_poke_starts_with, &va);
+    btree_partial_search_result result = btree_partial_search(
+        pokemon_hashed_names_btree,
+        pokemon_hashed_names_btree_depth,
+        buf, buflen
+      );
+
+    visitor_poke_starts_with_args_t va = {buf, buflen};
+    queue_t res_q = queue_from_btree(result.r, result.depth, visitor_poke_starts_with, &va);
 
     uint64_t hashmix;
     while (queue_remove(res_q, &hashmix)) {

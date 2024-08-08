@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <ctype.h>
 
-btree *pokemon_hashed_names_btree;
+//btree *pokemon_hashed_names_btree;
 
 uint64_t pokemon_hash_name(const char *name) {
   const char *og_name = name;
@@ -46,6 +46,8 @@ int hash_tuple_cmp(const void *lhs, const void *rhs) {
 }
 
 void dyn_tables_init() {
+  pokemon_hashed_names_init();
+  return; // skip costly sorting and shiz
   uint64_t *hashed_names = malloc(pokemon_count * sizeof(uint64_t));
 
   for (size_t i = 0; i < pokemon_count; i++) {
