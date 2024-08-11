@@ -1,0 +1,11 @@
+bench-*
+*.png
+*.p.out
+*.p.proc
+*.gen
+
+bin
+include
+lib
+lib64
+share
