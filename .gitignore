@@ -1,6 +1,7 @@
 pokemon.h
 pokemon.csv
 pokemon
+test
 gmon.out
 *.o
 pokemon_baked_hashed_names.c
