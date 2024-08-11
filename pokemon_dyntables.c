@@ -3,8 +3,6 @@
 #include <assert.h>
 #include <ctype.h>
 
-//btree *pokemon_hashed_names_btree;
-
 uint64_t pokemon_hash_name(const char *name) {
   const char *og_name = name;
   const ssize_t l = 11;
@@ -45,37 +43,4 @@ int hash_tuple_cmp(const void *lhs, const void *rhs) {
   return (a > b) - (a < b);
 }
 
-void dyn_tables_init() {
-  pokemon_hashed_names_init();
-  return; // skip costly sorting and shiz
-  uint64_t *hashed_names = malloc(pokemon_count * sizeof(uint64_t));
-
-  for (size_t i = 0; i < pokemon_count; i++) {
-    hashed_names[i + 0]
-      = pokemon_hash_name(pokemon_names[i]) << 10 | i;
-  }
-
-  qsort(
-      hashed_names,
-      pokemon_count,
-      sizeof(uint64_t),
-      hash_tuple_cmp
-    );
-
-  for (int i = 0; i < pokemon_count; i++) {
-    uint64_t hash = hashed_names[i] >> 10;
-    uint32_t id = hashed_names[i] & 0x3FF;
-    printf("hash %lu, id %d, name %s\n", hash, id, pokemon_names[id]);
-  }
-  pokemon_hashed_names_btree = btree_from_ordered_vec(
-      hashed_names,
-      2*sizeof(uint32_t),
-      pokemon_count
-    );
-  free(hashed_names);
-}
-
-void dyn_tables_fini() {
-  btree_free(pokemon_hashed_names_btree);
-}
 

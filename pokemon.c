@@ -211,7 +211,6 @@ visitor_result_t visitor_poke_starts_with(uint64_t val, void *arg) {
 }
 
 int main(void) {
-  dyn_tables_init();
   srand(time(NULL));
   stack_t pokes = NULL;
   
@@ -259,8 +258,6 @@ int main(void) {
 
     queue_free(res_q);
   } while(strncmp(buf, "quit", 32) != 0);
-
-  dyn_tables_fini();
 
   return 0;
 }

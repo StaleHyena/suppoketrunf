@@ -88,29 +88,34 @@ def btree_print(a, depth, printfunc):
 
     print(")");
 
-def btree_macro_repr(node, depth):
+def btree_macro_repr(node, total_depth, depth, bt_name, linidx):
     if node == None:
-        return "NULL";
-    pad = "  " * depth;
+        return ("", -1);
     am_leaf = not node[0] and not node[2];
-    l = btree_macro_repr(node[0], depth+1);
+    linidx_step = 2**(total_depth - depth - 2)
+    l,li = btree_macro_repr(node[0], total_depth, depth+1, bt_name, linidx - linidx_step);
     v = node[1];
     phash = node[1][0];
     pid = node[1][1];
     vpacked = (phash << 10) | pid & 0x3FF;
     cmnt = names[pid] + f", id {pid}, depth {depth}";
-    r = btree_macro_repr(node[2], depth+1);
-    return f"btree_alloc({vpacked}, // {cmnt}\n{pad}  {l},\n{pad}  {r}\n{pad})";
+    r,ri = btree_macro_repr(node[2], total_depth, depth+1, bt_name, linidx + linidx_step);
 
-btree_repr = btree_macro_repr(bt, 1);
+    lref = f"&{bt_name}[{li}]" if li >= 0 else "NULL";
+    rref = f"&{bt_name}[{ri}]" if ri >= 0 else "NULL";
+    return (f"[{linidx}] = {{{vpacked}, {lref}, {rref}}}, // {cmnt}\n" + l + r, linidx);
+
 btree_depth = bt[3];
+btree_name = "pokemon_btree";
+btree_ext_name = "pokemon_hashed_names_btree";
+btree_repr = btree_macro_repr(bt, btree_depth, 0, btree_name, 2**(btree_depth - 1))[0];
 print(f"""
 #include "pokemon_dyntables.h"
-btree *pokemon_hashed_names_btree;
-size_t pokemon_hashed_names_btree_depth = {btree_depth};
-void pokemon_hashed_names_init() {{
-  pokemon_hashed_names_btree =
-  {btree_repr};
-}}
+
+btree {btree_name}[{2**btree_depth}] = {{
+{btree_repr}
+}};
+btree *{btree_ext_name} = &{btree_name}[{2**(btree_depth - 1)}];
+size_t {btree_ext_name}_depth = {btree_depth};
 """);
 
