@@ -14,18 +14,6 @@ with open("../pokemon.csv", newline='') as pkfile:
         name_lens.append((len(name), len(filtered_name)))
         names.append(row[1]);
 
-# all well and good, but approximate names
-# don't give approximate hashes
-#hashlut = [ 17,  13, 373, 197, 421, 179, 947, 509];
-#          # 439, 997, 823, 947,1013, 347, 509, 193];
-#def hash_func(name):
-#    acc = 0;
-#    l = 0;
-#    for c in name:
-#        acc += ord(c) * hashlut[ord(c) & 0b111];
-#        l += 1;
-#    return acc;
-
 # So, to get a progressive
 # hash going, i've decided to make a base-27 positional
 # number system to assign each pokemon name a number.
@@ -39,17 +27,17 @@ def hash_func(name):
     # tradeoff between specificity and enumerable length
     # `l` places at most, we've only got
     # 2**54 values at our disposal
-    l = 11
+    l = 10
     name_lowered = list(filter(lambda x: (x <= 'z' and x >= 'a') or x == ' ', name.lower()));
     name = list(map(lambda x: ord(x) - ord('a') + 1 if x != ' ' else 0, name_lowered));
 
     acc = 0;
     for i, c in enumerate(name):
-        exp = l - 1 - i;
+        exp = l - i;
         exp = exp if exp > 0 else 0;
         acc += (27)**exp * c;
-    loff = l - len(og_name)
-    acc += loff
+    #loff = l - len(og_name)
+    #acc += loff
     if acc > 2**54:
         print("")
         print(og_name

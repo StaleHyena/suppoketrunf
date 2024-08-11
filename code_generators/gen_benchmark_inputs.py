@@ -10,6 +10,10 @@ if (len(sys.argv) < 2):
 
 fname = sys.argv[1];
 
+only_exact = False;
+if (len(sys.argv) >= 3):
+    only_exact = True;
+
 names = [];
 longest_name_len = 0;
 
@@ -22,6 +26,11 @@ with open(fname, newline='') as pkfile:
         namelen = len(name);
         if namelen > longest_name_len:
             longest_name_len = namelen;
+
+if only_exact:
+    for query in names:
+        print(query);
+    exit(0);
 
 ins = set()
 for i in range(0, longest_name_len-1):
