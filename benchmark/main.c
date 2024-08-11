@@ -68,7 +68,7 @@ btree_partial_search(btree *bt, size_t bt_depth, const char *buf, ssize_t buflen
 }
 
 typedef struct { int take; uint64_t val; } visitor_result_t;
-void queue_from_btree_inner(btree *bt, visitor_result_t (*visitor)(uint64_t, void *), void *visitor_args, queue_t *out, size_t depth) {
+void queue_from_btree_inner(btree *bt, visitor_result_t (*visitor)(uint64_t, void *), void *visitor_args, queue_t **out, size_t depth) {
   if (!bt) return;
   
   queue_from_btree_inner(bt->l, visitor, visitor_args, out, depth + 1);
@@ -82,8 +82,8 @@ void queue_from_btree_inner(btree *bt, visitor_result_t (*visitor)(uint64_t, voi
   queue_from_btree_inner(bt->r, visitor, visitor_args, out, depth + 1);
 }
 
-queue_t queue_from_btree(btree *bt, size_t bt_depth, visitor_result_t (*visitor)(uint64_t, void *), void *visitor_args) {
-  queue_t q = queue_alloc(powil(2, bt_depth) - 1);
+queue_t *queue_from_btree(btree *bt, size_t bt_depth, visitor_result_t (*visitor)(uint64_t, void *), void *visitor_args) {
+  queue_t *q = queue_alloc(powil(2, bt_depth) - 1);
   queue_from_btree_inner(bt, visitor, visitor_args, &q, 0);
   return q;
 }
@@ -115,7 +115,7 @@ void bench_btree() {
       );
 
     visitor_poke_starts_with_args_t va = {buf, buflen};
-    queue_t res_q = queue_from_btree(result.r, result.depth, visitor_poke_starts_with, &va);
+    queue_t *res_q = queue_from_btree(result.r, result.depth, visitor_poke_starts_with, &va);
 
     queue_free(res_q);
   }
@@ -129,7 +129,7 @@ void bench_linear() {
     // remove newline
     if (buf[buflen-1] == '\n') buf[--buflen] = '\0';
 
-    queue_t res_q = queue_alloc(pokemon_count);
+    queue_t *res_q = queue_alloc(pokemon_count);
 
     for (size_t i = 0; i < pokemon_count; i++) {
       const char *pn = pokemon_names[i];

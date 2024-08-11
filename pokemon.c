@@ -176,7 +176,7 @@ btree_partial_search(btree *bt, size_t bt_depth, const char *buf, ssize_t buflen
 }
 
 typedef struct { int take; uint64_t val; } visitor_result_t;
-void queue_from_btree_inner(btree *bt, visitor_result_t (*visitor)(uint64_t, void *), void *visitor_args, queue_t *out, size_t depth) {
+void queue_from_btree_inner(btree *bt, visitor_result_t (*visitor)(uint64_t, void *), void *visitor_args, queue_t **out, size_t depth) {
   //printf("%s call: %p , depth %zu\n", __func__, bt, depth);
   if (!bt) return;
   
@@ -191,9 +191,10 @@ void queue_from_btree_inner(btree *bt, visitor_result_t (*visitor)(uint64_t, voi
   queue_from_btree_inner(bt->r, visitor, visitor_args, out, depth + 1);
 }
 
-queue_t queue_from_btree(btree *bt, size_t bt_depth, visitor_result_t (*visitor)(uint64_t, void *), void *visitor_args) {
-  queue_t q = queue_alloc(powil(2, bt_depth) - 1);
-  printf("allocated queue of size %zu\n", (size_t)powil(2, bt_depth) - 1);
+queue_t *queue_from_btree(btree *bt, size_t bt_depth, visitor_result_t (*visitor)(uint64_t, void *), void *visitor_args) {
+  size_t size_hint = powil(2, bt_depth) - 1;
+  queue_t *q = queue_alloc(size_hint);
+  printf("allocated queue %p of size %zu\n", q, size_hint);
   queue_from_btree_inner(bt, visitor, visitor_args, &q, 0);
   return q;
 }
@@ -248,7 +249,7 @@ int main(void) {
       );
 
     visitor_poke_starts_with_args_t va = {buf, buflen};
-    queue_t res_q = queue_from_btree(result.r, result.depth, visitor_poke_starts_with, &va);
+    queue_t *res_q = queue_from_btree(result.r, result.depth, visitor_poke_starts_with, &va);
 
     uint64_t hashmix;
     while (queue_remove(res_q, &hashmix)) {

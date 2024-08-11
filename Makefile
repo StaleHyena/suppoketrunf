@@ -1,17 +1,25 @@
-CFLAGS := $(CFLAGS) -I. -pg
+CFLAGS := $(CFLAGS) -I.
 
-targets := pokemon
 csv := pokemon.csv
+exe := pokemon
+targets := $(exe)
 
-all: $(targets)
-pokemon: pokemon.c pokemon.h \
+all: release
+
+$(exe): pokemon.c pokemon.h \
 	stack.o btree.o queue.o utils.o \
 	pokemon_tables.o pokemon_dyntables.o \
 	pokecards.o pokemon_ascii.o pokemon_baked_hashed_names.o
 	$(LINK.c) -o $@ $(filter-out %.h,$^)
 
-test: test.c stack.o pokemon_tables.o pokecards.o
-	$(LINK.c) -o $@ $^
+release: CFLAGS := $(CFLAGS) -O3
+release: $(targets)
+
+debug: CFLAGS := $(CFLAGS) -O0 -g
+debug: $(targets)
+
+profile: CFLAGS := $(CFLAGS) -O3 -p -g
+profile: $(targets)
 
 pokemon.h: code_generators/csv_to_macrolist.py $(csv)
 	$< $(csv) > $@

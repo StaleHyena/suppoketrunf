@@ -1,4 +1,5 @@
 bench-*
+result.json
 *.png
 *.p.out
 *.p.proc
