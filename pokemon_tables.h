@@ -44,6 +44,7 @@ typedef struct {
 const char *pokemon_type_repr_str(int type_id);
 
 extern const char *pokemon_names[];
+extern const uint8_t pokemon_name_lengths[];
 extern const size_t pokemon_ids[];
 extern enum pokemon_types_t pokemon_types[][2];
 extern pokemon_stats_t pokemon_stats[];

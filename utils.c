@@ -38,7 +38,7 @@ visitor_poke_starts_with(uint64_t val, void *arg) {
   visitor_result_t r = {.take = 0, .val = val};
   uint16_t id = val & 0x3FF;
   const char *pokename = pokemon_names[id];
-  size_t pokenamelen = strlen(pokename);
+  size_t pokenamelen = pokemon_name_lengths[id];
   if (pokenamelen < s->buflen) return r;
   r.take = strncasecmp(s->buf, pokename, s->buflen) == 0;
   return r;

@@ -19,16 +19,13 @@ void bench_btree() {
     // remove newline
     if (buf[buflen-1] == '\n') buf[--buflen] = '\0';
 
-    btree_fuzzy_ret result = btree_fuzzy_search(
+    queue_t *result = btree_fuzzy_search(
         pokemon_hashed_names_btree,
         pokemon_hashed_names_btree_depth,
         buf, buflen, pokemon_hash_name(buf)
       );
 
-    visitor_poke_starts_with_args_t va = {buf, buflen};
-    queue_t *res_q = queue_from_btree(result.r, result.depth, visitor_poke_starts_with, &va);
-
-    queue_free(res_q);
+    queue_free(result);
   }
 }
 

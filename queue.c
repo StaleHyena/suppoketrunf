@@ -10,6 +10,7 @@ struct queue_data {
 // util func
 size_t
 queue_mod(queue_t *handle, size_t idx) {
+  if (!handle) return 0;
   return (handle->capacity > 0)? (idx % handle->capacity) : 0;
 }
 
@@ -27,6 +28,7 @@ queue_alloc(size_t size_hint) {
 // private func FIXME: breaks when tail is not in the last position!
 queue_t *
 queue_realloc(queue_t *handle, size_t nsize) {
+  if (!handle) return queue_alloc(nsize);
   handle->vals = realloc(handle->vals, nsize * sizeof(queue_value_t));
   handle->capacity = nsize;
   return handle;
@@ -49,6 +51,7 @@ queue_insert(queue_t *handle, queue_value_t nval) {
 
 int
 queue_remove(queue_t *handle, queue_value_t *out) {
+  if (!handle) return 0;
   int off = queue_peek(handle, out);
   handle->size = handle->size - off;
   handle->head = queue_mod(handle, handle->head + off);
@@ -65,6 +68,7 @@ queue_peek(queue_t *handle, queue_value_t *out) {
 
 void
 queue_free(queue_t *handle) {
+  if (!handle) return;
   if (handle->vals) {
     free(handle->vals);
     handle->vals = NULL;

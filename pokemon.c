@@ -97,13 +97,6 @@ stack_t random_take_n(stack_t s, size_t num) {
   return acc;
 }
 
-void print_hash_tuple(btree *e) {
-  uint64_t hash = e->val >> 10;
-  uint32_t id = e->val & 0x3FF;
-
-  printf("hash %lu, id %u, name %s", hash, id, pokemon_names[id]);
-}
-
 void print_bt_pokemon(btree *e) {
   uint64_t id = e->val & 0x3FF;
   printf("%s\n", pokecard_repr_simplestr_salloc(id));
@@ -140,22 +133,19 @@ int main(void) {
     // remove newline
     if (buf[buflen-1] == '\n') buf[--buflen] = '\0';
 
-    btree_fuzzy_ret result = btree_fuzzy_search(
+    queue_t *result = btree_fuzzy_search(
         pokemon_hashed_names_btree,
         pokemon_hashed_names_btree_depth,
         buf, buflen, pokemon_hash_name(buf)
       );
 
-    visitor_poke_starts_with_args_t va = {buf, buflen};
-    queue_t *res_q = queue_from_btree(result.r, result.depth, visitor_poke_starts_with, &va);
-
     uint64_t hashmix;
-    while (queue_remove(res_q, &hashmix)) {
+    while (queue_remove(result, &hashmix)) {
       uint16_t id = hashmix & 0x3FF;
       printf("%s\n", pokecard_repr_simplestr_salloc(id));
     }
 
-    queue_free(res_q);
+    queue_free(result);
   } while(strncmp(buf, "quit", 32) != 0);
 
   return 0;

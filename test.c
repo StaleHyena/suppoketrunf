@@ -2,76 +2,85 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
-#include "stack.h"
+#include <assert.h>
+#include <string.h>
+#include <ctype.h>
 #include "pokemon_tables.h"
-#include "pokecards.h"
+#include "pokemon_dyntables.h"
+#include "queue.h"
+#include "btree_fuzzy_search.h"
+#include "utils.h"
 
-stack_t very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(stack_t a, size_t sizehint);
-int main(void) {
-  srand(time(NULL));
-  stack_t cards = NULL;
-  size_t num_of_cards = 164;
-  for (int i = 1; i <= num_of_cards; i++) {
-    cards = stack_push(cards, i);
+void
+queue_compile_res_inner(btree *bt, const char *buf, size_t buf_len, queue_t **out, size_t depth) {
+  if (!bt) return;
+  
+  queue_compile_res_inner(bt->l, buf, buf_len, out, depth + 1);
+
+  int16_t id = bt->val & 0x3FF;
+  if (pokemon_name_lengths[id] >= buf_len) { 
+    const char *pokename = pokemon_names[id];
+  
+    int take = 1;
+    for (uint8_t needle = 0; needle < buf_len; needle++) {
+      if (pokename[needle] != buf[needle]) {
+        take = 0;
+        break;
+      }
+    }
+    if (take) {
+      *out = queue_insert(*out, bt->val);
+    }
   }
 
-  cards = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(cards, num_of_cards);
-  cards = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(cards, num_of_cards);
-  cards = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(cards, num_of_cards);
+  queue_compile_res_inner(bt->r, buf, buf_len, out, depth + 1);
+}
 
-  int c;
-  while(cards = stack_pop(cards, &c)) {
-    printf("%s\n", pokecard_repr_str_salloc(c));
+queue_t *
+queue_compile_res(btree *bt, size_t bt_depth, const char *buf, size_t buf_len) {
+  queue_t *q = queue_alloc((1 << bt_depth) - 1);
+  queue_compile_res_inner(bt, buf, buf_len, &q, 0);
+  return q;
+}
+
+int main(int argc, char **argv) {
+  char buf[32] = {0};
+
+
+  while(fgets(buf, 32, stdin) != NULL && strncmp(buf, "quit", 32)) {
+    int8_t hits[1024] = {0};
+    size_t buflen = strlen(buf);
+    
+    // remove newline
+    if (buf[buflen-1] == '\n') buf[--buflen] = '\0';
+
+    queue_t *result = btree_fuzzy_search(
+        pokemon_hashed_names_btree,
+        pokemon_hashed_names_btree_depth,
+        buf, buflen, pokemon_hash_name(buf)
+      );
+
+    for (size_t i = 0; i < pokemon_count; i++) {
+      const char *pn = pokemon_names[i];
+      if (strncmp(buf, pn, buflen) == 0) {
+        hits[i]--;
+      }
+    }
+
+    uint64_t hashmix_bt;
+    while (queue_remove(result, &hashmix_bt)) {
+      uint16_t bt_id = hashmix_bt & 0x3FF;
+      hits[bt_id]++;
+    }
+    for (size_t i = 0; i < pokemon_count; i++) {
+      if (hits[i] != 0) {
+        fprintf(stderr, "searching for %s: btree %s %s!\n", buf, (hits[i] > 0)? "caught" : "missed", pokemon_names[i]);
+      }
+    }
+
+    queue_free(result);
   }
 
   return 0;
 }
 
-// likes to leave a small unsorted section in the top, call it multiple times to "fix" it
-stack_t very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(stack_t a, size_t sizehint) {
-  size_t depth = 0;
-  stack_t b = NULL;
-  for (; a && depth < sizehint/2; depth++) {
-    int val;
-    a = stack_pop(a, &val);
-    b = stack_push(b, val);
-  }
-
-  uint32_t choice;
-  size_t needle = 0;
-  stack_t result = NULL;
-  while (a && b) {
-    if (needle % (sizeof(choice) * 8) == 0) {
-      choice = random();
-    }
-    printf("needle %d: %s%s\n" "%s\n" "%s\n" "%s\n",
-        needle,
-        (needle % (sizeof(choice) * 8) == 0)? "random call! ":"",
-        (choice & 0b1)? "right" : "left",
-        stack_debug_str_sall4(a),
-        stack_debug_str_sall4(b),
-        stack_debug_str_sall4(result)
-      );
-    int selv;
-    if (choice & 0b1) {
-      b = stack_pop(b, &selv);
-    } else {
-      a = stack_pop(a, &selv);
-    }
-    choice >>= 1;
-    result = stack_push(result, selv);
-    needle++;
-  }
-  // get any leftovers
-  while (a) {
-    int val;
-    a = stack_pop(a, &val);
-    result = stack_push(result, val);
-  }
-  while (b) {
-    int val;
-    b = stack_pop(b, &val);
-    result = stack_push(result, val);
-  }
-  return result;
-}

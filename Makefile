@@ -1,4 +1,4 @@
-CFLAGS := $(CFLAGS) -I.
+CFLAGS := $(CFLAGS) -I. -fno-omit-frame-pointer
 
 csv := pokemon.csv
 exe := pokemon
@@ -13,10 +13,17 @@ $(exe): pokemon.c pokemon.h \
 	pokemon_baked_hashed_names.o btree_fuzzy_search.o
 	$(LINK.c) -o $@ $(filter-out %.h,$^)
 
+test: test.c pokemon.h \
+	stack.o btree.o queue.o utils.o \
+	pokemon_tables.o pokemon_dyntables.o \
+	pokecards.o pokemon_ascii.o \
+	pokemon_baked_hashed_names.o btree_fuzzy_search.o
+	$(LINK.c) -o $@ $(filter-out %.h,$^)
+
 release: CFLAGS := $(CFLAGS) -O3
 release: $(targets)
 
-debug: CFLAGS := $(CFLAGS) -O0 -g
+debug: CFLAGS := $(CFLAGS) -DDEBUG -O0 -g
 debug: $(targets)
 
 profile: CFLAGS := $(CFLAGS) -O3 -p -g
