@@ -14,6 +14,7 @@
 #include "btree.h"
 #include "btree_fuzzy_search.h"
 #include "utils.h"
+#include "game.h"
 
 // likes to leave a small unsorted section in the top, call it multiple times to "fix" it
 stack_t very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(stack_t a, size_t sizehint) {
@@ -102,8 +103,7 @@ void print_bt_pokemon(btree *e) {
   printf("%s\n", pokecard_repr_simplestr_salloc(id));
 }
 
-int main(void) {
-  srand(time(NULL));
+stack_t random_pile(size_t s) {
   stack_t pokes = NULL;
   
   for (int i = 0; i < pokemon_count; i++) {
@@ -113,21 +113,63 @@ int main(void) {
   pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, pokemon_count);
   pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, pokemon_count);
   pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, pokemon_count);
-  pokes = random_take_n(pokes, 4);
+  pokes = random_take_n(pokes, s);
+  return pokes;
+}
 
-  int c;
-  assert(stack_peek(pokes, &c)); // make sure there's at least one
-  do {
-    pokes = stack_pop(pokes, &c);
-    print_pokemon(pokemon_ids[c]);
-    printf("%s\n", pokecard_repr_simplestr_salloc(c));
-  } while (pokes);
+int player_driver(int pid) {
+  printf("You are up, your pokemon is: \t%s\n"
+      "Which stat are you going to choose?\n"
+      "(1 - TOTAL; 2 - HP; 3 - ATK; 4 - DEF)\n",
+      pokecard_repr_simplestr_salloc(pid));
+  int choice = 0;
+  char buf[8] = {0};
+  while (fgets(buf, 8, stdin) != NULL) {
+    choice = atoi(buf);
+    if (choice < 1 && choice > 4) {
+      printf("Valor inválido, tente novamente!");
+    } else { break; }
+  }
+  return choice;
+}
 
-  //btree_print(pokemon_hashed_names_btree, print_hash_tuple);
+int computer_driver(int pid) {
+  int choice = 0;
+  pokemon_stats_t ps = pokemon_stats[pid];
+  int biggest = 0;
+  if (ps.total > biggest) { biggest = ps.total; choice = 1; }
+  if (ps.hp > biggest) { biggest = ps.hp; choice = 2; }
+  if (ps.attack > biggest) { biggest = ps.attack; choice = 3; }
+  if (ps.defense > biggest) { biggest = ps.defense; choice = 4; }
+  return choice;
+}
+
+int main(int argc, char **argv) {
+  srand(time(NULL));
+
+  game_t g = {0};
+  g.player_cnt = 2;
+  if (argc >= 2) {
+    g.player_cnt = atoi(argv[1]);
+    printf("set player count to %d\n", g.player_cnt);
+  }
+  stack_t pokes = random_pile(32);
+
+  for (int i = 0; i < g.player_cnt; i++) {
+    g.players[i] = player_alloc(&pokes, 32/g.player_cnt,
+        (i > 0)? computer_driver : player_driver);
+  }
+
+  puts(game_repr_sall(&g));
+
+  while (g.state == GAME_RUN) {
+    game_next_round(&g);
+  }
 
   char buf[32] = {0};
-  do {
-    if(fgets(buf, 32, stdin) == NULL) break;
+  while(fgets(buf, 32, stdin) != NULL
+     && strncmp(buf, "quit\n", 32) != 0)
+  {
     size_t buflen = strlen(buf);
     
     // remove newline
@@ -146,7 +188,7 @@ int main(void) {
     }
 
     queue_free(result);
-  } while(strncmp(buf, "quit", 32) != 0);
+  }
 
   return 0;
 }

@@ -36,11 +36,21 @@ def hash_func(name):
 
 hashtups = [];
 names = [];
+
+filter_func = lambda i,n,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen,leg,nlen: True;
+if (len(sys.argv) >= 3):
+    filter_func = lambda i,n,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen,leg,nlen: eval(sys.argv[2]);
 with open(fname, newline='') as pkfile:
     nocomments = filter(lambda l: l[0] != '#' if len(l) > 0 else False, pkfile);
     pkr = csv.reader(nocomments, delimiter=',');
     for uid, row in enumerate(pkr):
+        i,n,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen,leg = row;
+        nlen = len(n);
+        p = filter_func(i,n,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen,leg,nlen);
+
         name = row[1];
+        if not p:
+            continue;
         names.append(name);
         hashtups.append((hash_func(name), uid));
 

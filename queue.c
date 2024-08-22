@@ -76,6 +76,10 @@ queue_free(queue_t *handle) {
   free(handle);
 }
 
+size_t queue_size(queue_t *handle) {
+  return (handle)? handle->size : 0;
+}
+
 char *
 queue_debug_str_sall4(queue_t *handle) {
   #define BUFSZ 256

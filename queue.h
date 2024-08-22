@@ -16,5 +16,6 @@ int queue_remove(queue_t *, queue_value_t *);
 char *queue_debug_str_sall4(queue_t *handle);
 int queue_peek(queue_t *, queue_value_t *);
 void queue_free(queue_t *);
+size_t queue_size(queue_t *);
 
 #endif // QUEUE_H__

@@ -9,7 +9,7 @@ all: release
 $(exe): pokemon.c pokemon.h \
 	stack.o btree.o queue.o utils.o \
 	pokemon_tables.o pokemon_dyntables.o \
-	pokecards.o pokemon_ascii.o \
+	pokecards.o pokemon_ascii.o game.o \
 	pokemon_baked_hashed_names.o btree_fuzzy_search.o
 	$(LINK.c) -o $@ $(filter-out %.h,$^)
 
