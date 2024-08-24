@@ -99,7 +99,7 @@ stack_t random_take_n(stack_t s, size_t num) {
 }
 
 void print_bt_pokemon(btree *e) {
-  uint64_t id = e->val & 0x3FF;
+  uint64_t id = e->val & 0x7FF;
   printf("%s\n", pokecard_repr_simplestr_salloc(id));
 }
 
@@ -193,7 +193,7 @@ int main(int argc, char **argv) {
 
     uint64_t hashmix;
     while (queue_remove(result, &hashmix)) {
-      uint16_t id = hashmix & 0x3FF;
+      uint16_t id = hashmix & 0x7FF;
       printf("%s\n", pokecard_repr_simplestr_salloc(id));
     }
 

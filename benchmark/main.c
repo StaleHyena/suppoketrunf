@@ -25,6 +25,10 @@ void bench_btree() {
         buf, buflen, pokemon_hash_name(buf)
       );
 
+    if (!queue_size(result)) {
+      fprintf(stderr, "query \"%s\" came up empty!\n", buf);
+    }
+
     queue_free(result);
   }
 }
@@ -44,6 +48,10 @@ void bench_linear() {
       if (strncmp(buf, pn, buflen) == 0) {
         queue_insert(res_q, i);
       }
+    }
+
+    if (!queue_size(res_q)) {
+      fprintf(stderr, "query \"%s\" came up empty!\n", buf);
     }
 
     queue_free(res_q);

@@ -36,7 +36,7 @@ visitor_result_t
 visitor_poke_starts_with(uint64_t val, void *arg) {
   visitor_poke_starts_with_args_t *s = (visitor_poke_starts_with_args_t*)arg;
   visitor_result_t r = {.take = 0, .val = val};
-  uint16_t id = val & 0x3FF;
+  uint16_t id = val & 0x7FF;
   const char *pokename = pokemon_names[id];
   size_t pokenamelen = pokemon_name_lengths[id];
   if (pokenamelen < s->buflen) return r;

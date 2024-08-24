@@ -18,7 +18,7 @@ btree_fuzzy_search_inner(btree *bt, size_t bt_depth, const char *buf, ssize_t bu
   //if (bt_depth == 0) return r; // dove in too deep (think about the implications)
   
   ssize_t needle = 0;
-  uint32_t id = bt->val & 0x3FF;
+  uint32_t id = bt->val & 0x7FF;
 
   // And here's where the facade of modularity breaks for real
   const char *n = pokemon_names[id];
@@ -37,7 +37,7 @@ btree_fuzzy_search_inner(btree *bt, size_t bt_depth, const char *buf, ssize_t bu
   DPRINTF("%s call: %p (%zu), \"%s\" (%zu), %lu, \"%s\" gets score %hhu\n",
           __func__, bt, bt_depth, buf, buf_len, hash, n, score);
 
-  btree *next = (hash > (bt->val >> 10))? bt->r : bt->l;
+  btree *next = (hash > (bt->val >> 11))? bt->r : bt->l;
 
   if (score) {
     if (!*out) { *out = queue_alloc((1<<bt_depth)-1); }
@@ -51,8 +51,8 @@ btree_fuzzy_search_inner(btree *bt, size_t bt_depth, const char *buf, ssize_t bu
 }
 
 void print_hash_tuple(btree *e) {
-  uint64_t hash = e->val >> 10;
-  uint32_t id = e->val & 0x3FF;
+  uint64_t hash = e->val >> 11;
+  uint32_t id = e->val & 0x7FF;
 
   printf("hash %lu, id %u, name %s", hash, id, pokemon_names[id]);
 }
@@ -64,6 +64,5 @@ btree_fuzzy_search(btree *bt, size_t bt_depth, const char *buf, ssize_t buf_len,
       bt, bt_depth,
       buf, buf_len, hash, &out
   );
-  //IIF(DEBUG_PRINT)(btree_print(r.r, print_hash_tuple),);
   return out;
 }

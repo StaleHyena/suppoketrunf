@@ -28,7 +28,7 @@ result.json: bench-normal \
 	$(PROF) $< $*.out > $@
 
 %.dot: %.prof
-	(. bin/activate; gprof2dot -n 0 -e 0 > $@ < $^; deactivate)
+	(. ./.venv/bin/activate; gprof2dot -n 0 -e 0 > $@ < $^; deactivate)
 
 %.png: %.p.dot
 	$(DOT) -Tpng -o $@ < $<

@@ -22,6 +22,12 @@ test: test.c pokemon.h \
 	pokemon_baked_hashed_names.o btree_fuzzy_search.o
 	$(LINK.c) -o $@ $(filter-out %.h,$^)
 
+viz/btree2dot: viz/btree2dot.c pokemon.h \
+	btree.o queue.o utils.o \
+	pokemon_tables.o pokemon_dyntables.o \
+	pokemon_baked_hashed_names.o
+	$(LINK.c) -o $@ $(filter-out %.h,$^)
+
 release: CFLAGS := $(CFLAGS) -O3
 release: $(targets)
 
@@ -38,7 +44,7 @@ pokemon.h: code_generators/csv_to_macrolist.py $(csv)
 	$< $(csv) > $@
 
 pokemon_baked_hashed_names.c: code_generators/bake_hashtable.py $(csv)
-	$< $(csv) > $@
+	$< $(csv) > $@ 2> alpha_order.txt
 
 %.o: %.c %.h
 	$(COMPILE.c) -o $@ $(filter %.c,$^)

@@ -2,7 +2,7 @@
 import csv
 import sys
 from math import log2
-from itertools import accumulate
+from itertools import accumulate, chain
 
 if (len(sys.argv) < 2):
     print("must provide a file path", file=sys.stderr);
@@ -16,45 +16,63 @@ def hash_func(name):
     # tradeoff between specificity and enumerable length
     # `l` places at most, we've only got
     # 2**54 values at our disposal
-    l = 11
+    l = 10
     name_lowered = list(filter(lambda x: (x <= 'z' and x >= 'a') or x == ' ', name.lower()));
     name = list(map(lambda x: ord(x) - ord('a') + 1 if x != ' ' else 0, name_lowered));
 
     acc = 0;
     for i, c in enumerate(name):
+        if i > l:
+            break;
         exp = l - 1 - i;
         exp = exp if exp > 0 else 0;
         acc += (27)**exp * c;
-    loff = l - len(og_name)
-    acc += loff
-    if acc > 2**54:
+    #loff = l - len(og_name)
+    #acc += loff
+    if acc > 2**53:
         print(og_name
             + " (" + "".join(name_lowered)
             + " -> " + "".join(map(lambda x: chr(x + ord('a')), name))
             + ") extrapolates max_val with hash value " + str(acc));
     return acc;
 
-hashtups = [];
+hashtups = {};
+conflicting = {};
 names = [];
 
-filter_func = lambda i,n,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen,leg,nlen: True;
+filter_func = lambda i,n,v,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen: True;
 if (len(sys.argv) >= 3):
-    filter_func = lambda i,n,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen,leg,nlen: eval(sys.argv[2]);
+    filter_func = lambda i,n,v,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen: eval(sys.argv[2]);
+
 with open(fname, newline='') as pkfile:
     nocomments = filter(lambda l: l[0] != '#' if len(l) > 0 else False, pkfile);
     pkr = csv.reader(nocomments, delimiter=',');
     for uid, row in enumerate(pkr):
-        i,n,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen,leg = row;
-        nlen = len(n);
-        p = filter_func(i,n,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen,leg,nlen);
-
-        name = row[1];
+        i,n,v,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen = row;
+        p = filter_func(i,n,v,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen);
         if not p:
             continue;
-        names.append(name);
-        hashtups.append((hash_func(name), uid));
 
+        name = n if not v.strip() else f"{n} ({v})";
+        names.append(name);
+
+        hres = hash_func(name);
+        
+        if hres in hashtups:
+            print(f"conflict between {name} and {hashtups[hres][0]}", file=sys.stderr);
+            conflicting[hres] = (name, uid);
+        else:
+            hashtups[hres] = (name, uid);
+
+# preserve only the hash and the uid, discard the name
+hashtups = list(chain(hashtups.items(), conflicting.items()))
 hashtups.sort(key=lambda x: x[0])
+
+for hashval, name_and_uid in hashtups:
+    name, uid = name_and_uid
+    print(f"{name} ({uid}): {hashval}", file=sys.stderr);
+
+hashtups = list(map(lambda x: (x[0], x[1][1]), hashtups));
 
 def btree_from_ordered_vec(vec, start_idx, end_idx):
     bt = None;
@@ -107,7 +125,7 @@ def btree_macro_repr(node, total_depth, depth, bt_name, linidx):
     v = node[1];
     phash = node[1][0];
     pid = node[1][1];
-    vpacked = (phash << 10) | pid & 0x3FF;
+    vpacked = (phash << 11) | pid & 0x7FF;
     cmnt = names[pid] + f", id {pid}, depth {depth}";
     r,ri = btree_macro_repr(node[2], total_depth, depth+1, bt_name, linidx + linidx_step);
 
