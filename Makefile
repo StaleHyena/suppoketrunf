@@ -1,5 +1,6 @@
 CFLAGS := $(CFLAGS) -I. -fno-omit-frame-pointer
 CURL := $(shell which curl)
+DOT := $(shell which dot)
 
 csv_url := https://raw.githubusercontent.com/lgreski/pokemonData/master/Pokemon.csv
 csv := pokemon.csv
@@ -27,6 +28,12 @@ viz/btree2dot: viz/btree2dot.c pokemon.h \
 	pokemon_tables.o pokemon_dyntables.o \
 	pokemon_baked_hashed_names.o
 	$(LINK.c) -o $@ $(filter-out %.h,$^)
+
+viz/btree.dot: viz/btree2dot
+	./viz/btree2dot > $@
+
+viz/btree.svg: viz/btree.dot
+	$(DOT) -Tsvg -o $@ $^
 
 release: CFLAGS := $(CFLAGS) -O3
 release: $(targets)
