@@ -25,6 +25,8 @@ player_repr_sall(player_t*);
 
 enum game_state {
   GAME_RUN,
+  GAME_RUN_DRAW,
+  GAME_CANCEL_ROUND,
   GAME_STOP,
 };
 
@@ -32,7 +34,10 @@ typedef struct {
   player_t players[MAX_PLAYERS];
   size_t player_cnt;
   size_t player_active;
+  size_t total_cards;
   enum game_state state;
+  queue_t *draw_winnings;
+  int draw_bitmask;
 } game_t;
 
 char *

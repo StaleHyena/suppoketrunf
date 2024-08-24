@@ -118,11 +118,11 @@ stack_t random_pile(size_t s) {
 }
 
 int player_driver(int pid) {
-  printf("You are up, your pokemon is: \t%s\n"
-      "Which stat are you going to choose?\n"
+  printf("Tua vez! teu pokemon é:\n\t%s\n"
+      "Qual tua escolha? "
       "(1 - TOTAL; 2 - HP; 3 - ATK; 4 - DEF)\n",
       pokecard_repr_simplestr_salloc(pid));
-  int choice = 0;
+  int choice = -1;
   char buf[8] = {0};
   while (fgets(buf, 8, stdin) != NULL) {
     choice = atoi(buf);
@@ -145,26 +145,36 @@ int computer_driver(int pid) {
 }
 
 int main(int argc, char **argv) {
-  srand(time(NULL));
+  time_t t = time(NULL);
+  srand(t);
+  printf("seed do prng é %ld\n", t);
 
   game_t g = {0};
+  g.total_cards = 32;
   g.player_cnt = 2;
   if (argc >= 2) {
     g.player_cnt = atoi(argv[1]);
-    printf("set player count to %d\n", g.player_cnt);
   }
-  stack_t pokes = random_pile(32);
+  if (argc >= 3) {
+    g.total_cards = atoi(argv[2]);
+  }
+  printf("número de jogadores é %d.\n", g.player_cnt);
+  printf("número de cartas em jogo é %d.\n", g.total_cards);
+  stack_t pokes = random_pile(g.total_cards);
 
   for (int i = 0; i < g.player_cnt; i++) {
-    g.players[i] = player_alloc(&pokes, 32/g.player_cnt,
+    g.players[i] = player_alloc(&pokes, g.total_cards/g.player_cnt,
         (i > 0)? computer_driver : player_driver);
   }
 
   puts(game_repr_sall(&g));
 
-  while (g.state == GAME_RUN) {
+  while (g.state != GAME_STOP) {
+    puts(game_repr_sall(&g));
     game_next_round(&g);
   }
+  
+  puts(game_repr_sall(&g));
 
   char buf[32] = {0};
   while(fgets(buf, 32, stdin) != NULL

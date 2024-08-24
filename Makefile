@@ -1,5 +1,7 @@
 CFLAGS := $(CFLAGS) -I. -fno-omit-frame-pointer
+CURL := $(shell which curl)
 
+csv_url := https://raw.githubusercontent.com/lgreski/pokemonData/master/Pokemon.csv
 csv := pokemon.csv
 exe := pokemon
 targets := $(exe)
@@ -28,6 +30,9 @@ debug: $(targets)
 
 profile: CFLAGS := $(CFLAGS) -O3 -p -g
 profile: $(targets)
+
+$(csv): $(CURL)
+	$(CURL) $(csv_url) | sed "1s/^/#/" > $@
 
 pokemon.h: code_generators/csv_to_macrolist.py $(csv)
 	$< $(csv) > $@
