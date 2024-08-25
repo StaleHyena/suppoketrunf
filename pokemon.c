@@ -146,18 +146,22 @@ int computer_driver(int pid) {
 
 int main(int argc, char **argv) {
   time_t t = time(NULL);
-  srand(t);
-  printf("seed do prng é %ld\n", t);
 
   game_t g = {0};
   g.total_cards = 32;
   g.player_cnt = 2;
+  g.playing_bitmask = ~0;
   if (argc >= 2) {
     g.player_cnt = atoi(argv[1]);
   }
   if (argc >= 3) {
     g.total_cards = atoi(argv[2]);
   }
+  if (argc >= 4) {
+    t = atoi(argv[3]);
+  }
+  srand(t);
+  printf("seed do prng é %ld\n", t);
   printf("número de jogadores é %d.\n", g.player_cnt);
   printf("número de cartas em jogo é %d.\n", g.total_cards);
   stack_t pokes = random_pile(g.total_cards);
@@ -167,10 +171,8 @@ int main(int argc, char **argv) {
         (i > 0)? computer_driver : player_driver);
   }
 
-  puts(game_repr_sall(&g));
-
   while (g.state != GAME_STOP) {
-    puts(game_repr_sall(&g));
+    DPRINTF("%s\n", game_repr_sall(&g));
     game_next_round(&g);
   }
   

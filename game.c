@@ -69,31 +69,24 @@ game_repr_sall(game_t* g) {
 
 // Side effect: pushes winnings to hand if needed
 void game_check_wincond(game_t *g) {
-  int handless = -1;
+  int players_left = 0;
+  int last_player_found = -1;
   for (int i = 0; i < g->player_cnt; i++) {
-    player_t *p = g->players + i;
-    if (!p->hand) {
-      if (player_extrahand(p) == 0) {
-        handless = i;
-      }
-      break;
+    if ((g->playing_bitmask >> i) & 0b1) {
+      players_left++;
+      last_player_found = i;
     }
   }
 
-  if (handless != -1) {
-    printf("O jogador %d perdeu todas as cartas, sinal que alguém ganhou. Procurando vencedor...\n", handless);
-
-    for (int i = 0; i < g->player_cnt; i++) {
-      player_t *p = g->players + i;
-      if (p->hand) {
-        // make sure no cards were lost
-        assert(p->card_cnt + (p->winnings? queue_size(p->winnings) : 0) == g->total_cards);
-        printf("O jogador %d ganhou esse jogo! Parabéns.\n", i);
-        g->state = GAME_STOP;
-        return;
-      }
+  if (players_left == 1) {
+    if (last_player_found < 0) {
+      printf("Ninguém ganhou! (??)\n");
+      g->state = GAME_STOP;
     }
-    printf("Ninguém ganhou! (??)\n");
+    player_t *p = g->players + last_player_found;
+    // make sure no cards were lost
+    assert(p->card_cnt + (p->winnings? queue_size(p->winnings) : 0) == g->total_cards);
+    printf("O jogador #%d ganhou esse jogo! Parabéns.\n", last_player_found);
     g->state = GAME_STOP;
   }
 }
@@ -141,7 +134,6 @@ game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
 
   printf("Jogador #%d selecionou a estatística %s!\n", g->player_active, r.stat_name);
 
-  puts(" -INICIO- ");
   // And the round winner is decided
   // checking for possible draws
   r.winner_player = -1;
@@ -149,35 +141,49 @@ game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
   r.winner_pokemon = -1;
   g->draw_bitmask = 0;
   
+  int pid_store[MAX_PLAYERS] = {-1};
+  int val_store[MAX_PLAYERS] = {-1};
+  int max_name_len = 0;
   for (int i = 0; i < g->player_cnt; i++) {
     if (!((players_bitmask >> i) & 0b1)) continue;
-    int pid = 0;
     player_t *p = g->players + i;
-    p->hand = stack_pop(p->hand, &pid);
+    p->hand = stack_pop(p->hand, &pid_store[i]);
     p->card_cnt--;
-    winnings = queue_insert(winnings, pid);
-    pokemon_stats_t ps = pokemon_stats[pid];
+    winnings = queue_insert(winnings, pid_store[i]);
+    pokemon_stats_t ps = pokemon_stats[pid_store[i]];
     
-    int val =
+    val_store[i] =
         r.choice == 1? ps.total
       : r.choice == 2? ps.hp
       : r.choice == 3? ps.attack
       : r.choice == 4? ps.defense : -1;
 
-    printf("Carta do jogador #%d%s: %s (%s %d)\n",
-      i,
-      (i == g->player_active)? " (jogando)" : "",
-      pokecard_repr_simplestr_salloc(pid),
-      r.stat_name,
-      val);
-    
-    if (val > r.winner_value) {
+    int nlen = strlen(pokemon_names[pid_store[i]]);
+    max_name_len = (nlen > max_name_len)? nlen : max_name_len;
+
+        
+    if (val_store[i] > r.winner_value) {
       r.winner_player = i;
-      r.winner_value = val;
-      r.winner_pokemon = pid;
-    } else if (val == r.winner_value) {
+      r.winner_value = val_store[i];
+      r.winner_pokemon = pid_store[i];
+      g->draw_bitmask = 0;
+    } else if (val_store[i] == r.winner_value) {
       g->draw_bitmask |= (1 << i) | (1 << r.winner_player);
     }
+  }
+
+  DPRINTF("max name len is %d\n", max_name_len);
+  puts(" -INICIO- ");
+  for (int i = 0; i < g->player_cnt; i++) {
+    if (!((players_bitmask >> i) & 0b1)) continue;
+
+    printf("%s#%d: %s (%s %d)\n",
+      (i == g->player_active)? "> " : "  ",
+      i,
+      pokecard_repr_simplestr_salloc_aligned(pid_store[i], max_name_len, 20),
+      r.stat_name,
+      val_store[i]);
+
   }
   puts(" -FIM- ");
   
@@ -217,7 +223,7 @@ game_resolve_draw(game_t *g) {
 
   // effective_active now is the correct "next chooser"
   g->player_active = effective_active;
-  round_result_t r = game_calc_round(g, g->draw_bitmask, g->draw_winnings);
+  round_result_t r = game_calc_round(g, g->draw_bitmask & g->playing_bitmask, g->draw_winnings);
   g->player_active = active_bak;
 
   return r;
@@ -226,14 +232,13 @@ game_resolve_draw(game_t *g) {
 void
 game_next_round(game_t *g) {
   round_result_t r = {0};
-
-
+  
   if (g->state == GAME_RUN_DRAW) {
     r = game_resolve_draw(g);
   } else {
     // magic size queue since they don't resize yet, FIXME
     queue_t *winnings = queue_alloc(g->player_cnt * g->total_cards);
-    r = game_calc_round(g, ~0, winnings); // takes ownership of `winnings`
+    r = game_calc_round(g, g->playing_bitmask, winnings); // takes ownership of `winnings`
   }
   
   if (g->state == GAME_CANCEL_ROUND) {
@@ -247,22 +252,26 @@ game_next_round(game_t *g) {
     }
     printf("! Próximo round será entre eles.\n");
   } else {
-    printf("\tO vencedor dessa rodada é o jogador #%d,\n"
-        "com o pokemon %s\n",
+    printf("\tO vencedor dessa rodada é"
+        " o jogador #%d, com o pokemon %s\n",
         r.winner_player,
-        pokecard_repr_simplestr_salloc(r.winner_pokemon)
+        pokemon_names[r.winner_pokemon]
       );
-    g->player_active = (g->player_active + 1) % g->player_cnt;
+    do {
+      g->player_active = (g->player_active + 1) % g->player_cnt;
+    } while (!((g->playing_bitmask >> g->player_active) & 0b1));
   }
-
+  
   for (int i = 0; i < g->player_cnt; i++) {
     player_t *p = g->players + i;
     if (!p->hand) {
       if (!player_extrahand(p)) {
         printf("O jogador #%d está sem cartas!\n", i);
+        g->playing_bitmask &= ~(1 << i);
       }
     }
   }
+
   game_check_wincond(g);
 }
 

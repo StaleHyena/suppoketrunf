@@ -2,9 +2,11 @@
 #define GAME_H__
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include "stack.h"
 #include "queue.h"
 #include "pokecards.h"
+#include "utils.h"
 
 #define MAX_PLAYERS 8
 
@@ -38,6 +40,7 @@ typedef struct {
   enum game_state state;
   queue_t *draw_winnings;
   int draw_bitmask;
+  int playing_bitmask;
 } game_t;
 
 char *

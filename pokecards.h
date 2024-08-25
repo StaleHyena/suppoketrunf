@@ -17,6 +17,7 @@ typedef enum {
 char card_group_char(card_group_t cg);
 
 char *pokecard_repr_simplestr_salloc(uint16_t uid);
+char *pokecard_repr_simplestr_salloc_aligned(uint16_t uid, size_t namelen, size_t grace);
 card_group_t pokecard_group_of(uint16_t uid);
 
 #endif // POKECARDS_H__

@@ -6,6 +6,19 @@
 #include "queue.h"
 #include "pokemon_dyntables.h"
 
+#ifndef DEBUG
+#define DEBUG_PRINT 0
+#else
+#define DEBUG_PRINT 1
+#endif
+#define CAT(a, ...) PRIMITIVE_CAT(a, __VA_ARGS__)
+#define PRIMITIVE_CAT(a, ...) a ## __VA_ARGS__
+#define EXPAND(x) x
+#define IIF(cond) CAT(IIF_, cond)
+#define IIF_0(t,f) f
+#define IIF_1(t,f) t
+#define DPRINTF(fmt, ...) IIF(DEBUG_PRINT)(fprintf(stderr, fmt, __VA_ARGS__),)
+
 uint64_t powil(uint8_t base, uint8_t exp);
 
 typedef struct { int take; uint64_t val; } visitor_result_t;

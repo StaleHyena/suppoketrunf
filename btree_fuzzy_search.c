@@ -1,16 +1,4 @@
 #include "btree_fuzzy_search.h"
-#ifndef DEBUG
-#define DEBUG_PRINT 0
-#else
-#define DEBUG_PRINT 1
-#endif
-#define CAT(a, ...) PRIMITIVE_CAT(a, __VA_ARGS__)
-#define PRIMITIVE_CAT(a, ...) a ## __VA_ARGS__
-#define EXPAND(x) x
-#define IIF(cond) CAT(IIF_, cond)
-#define IIF_0(t,f) f
-#define IIF_1(t,f) t
-#define DPRINTF(fmt, ...) IIF(DEBUG_PRINT)(printf(fmt, __VA_ARGS__),)
 
 void
 btree_fuzzy_search_inner(btree *bt, size_t bt_depth, const char *buf, ssize_t buf_len, uint64_t hash, queue_t **out) {
