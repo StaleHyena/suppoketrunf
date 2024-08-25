@@ -144,40 +144,29 @@ int computer_driver(int pid) {
   return choice;
 }
 
-int main(int argc, char **argv) {
-  time_t t = time(NULL);
+game_t new_game(player_driver_fptr *player_drivers, int player_cnt, int total_cards, long prng_seed) {
 
   game_t g = {0};
-  g.total_cards = 32;
-  g.player_cnt = 2;
+  g.total_cards = total_cards;
+  g.player_cnt = player_cnt;
   g.playing_bitmask = ~0;
-  if (argc >= 2) {
-    g.player_cnt = atoi(argv[1]);
-  }
-  if (argc >= 3) {
-    g.total_cards = atoi(argv[2]);
-  }
-  if (argc >= 4) {
-    t = atoi(argv[3]);
-  }
-  srand(t);
-  printf("seed do prng é %ld\n", t);
+  
+  srand(prng_seed);
+  printf("seed do prng é %ld\n", prng_seed);
   printf("número de jogadores é %d.\n", g.player_cnt);
   printf("número de cartas em jogo é %d.\n", g.total_cards);
   stack_t pokes = random_pile(g.total_cards);
 
   for (int i = 0; i < g.player_cnt; i++) {
-    g.players[i] = player_alloc(&pokes, g.total_cards/g.player_cnt,
-        (i > 0)? computer_driver : player_driver);
+    g.players[i] = player_alloc(
+        &pokes,
+        g.total_cards/g.player_cnt,
+        player_drivers[i]);
   }
+  return g;
+}
 
-  while (g.state != GAME_STOP) {
-    DPRINTF("%s\n", game_repr_sall(&g));
-    game_next_round(&g);
-  }
-  
-  puts(game_repr_sall(&g));
-
+void pokedex() {
   char buf[32] = {0};
   while(fgets(buf, 32, stdin) != NULL
      && strncmp(buf, "quit\n", 32) != 0)
@@ -200,6 +189,102 @@ int main(int argc, char **argv) {
     }
 
     queue_free(result);
+  }
+}
+
+int main(int argc, char **argv) {
+  int pc = 4, tc = 32;
+  long seed = time(NULL);
+  int menu_stage = 0;
+  if (argc >= 2) {
+    if (argv[1][0] == 'p') {
+      menu_stage = -1;
+    } else {
+      pc = atoi(argv[1]);
+      menu_stage = 2;
+    }
+  }
+  if (argc >= 3) {
+    tc = atoi(argv[2]);
+    menu_stage = 3;
+  }
+  if (argc >= 4) {
+    seed = atoi(argv[3]);
+    menu_stage = 4;
+  }
+
+  player_driver_fptr drivers[MAX_PLAYERS] = {0};
+  char buf[32] = {0};
+  while(menu_stage < 5) {
+    const char *questions[] = {
+      "Jogo ou pokedex? ([J]ogo | [p]okedex) ",
+      "Quantos jogadores? [0.." M2STR(MAX_PLAYERS) "] (4) ",
+      "Quantas cartas em jogo? (32) ",
+      "Seed específica? (derivada do [T]empo | <valor>) ",
+      "Configuração de jogadores:\n"
+    };
+    printf("%s", questions[menu_stage]);
+    if (menu_stage != 4 && fgets(buf, 32, stdin) == NULL) break;
+    size_t buflen = strlen(buf);
+    if (buflen && buf[buflen-1] == '\n') buf[--buflen] = '\0';
+    int v = atoi(buf);
+    switch (menu_stage) {
+      case 0:
+        if (buflen == 0) menu_stage = 1;
+        switch(buf[0]) {
+          case 'J':
+          case 'j':
+            menu_stage = 1;
+            break;
+          case 'P':
+          case 'p':
+            menu_stage = 5;
+            break;
+        }
+        break;
+      case 1: {
+        if (buflen != 0) {
+          pc = v;
+        }
+        menu_stage = 2;
+        break;
+      case 2: if (buflen != 0) tc = v; menu_stage = 3; break;
+      case 3: if (buflen != 0) seed = v; menu_stage = 4; break;
+      case 4:
+        for (int i = 0; i < pc; i++) {
+          driver_choice: printf("Jogador #%d real ou computador? (R/c) ", i);
+          if (fgets(buf, 32, stdin) == NULL) goto loop_break;
+          switch (buf[0]) {
+            case '\n':
+            case 'r':
+            case 'R':
+              drivers[i] = player_driver;
+              break;
+            case 'c':
+            case 'C':
+              drivers[i] = computer_driver;
+              break;
+          }
+        }
+        menu_stage = 5;
+      } break;
+      case -1: goto loop_break;
+    }
+    continue;
+loop_break: break;
+  }
+
+  if (menu_stage == -1) {
+    pokedex();
+  } else {
+    game_t g = new_game(drivers, pc, tc, seed);
+
+    while (g.state != GAME_STOP) {
+      DPRINTF("%s\n", game_repr_sall(&g));
+      game_next_round(&g);
+    }
+    
+    puts(game_repr_sall(&g));
   }
 
   return 0;

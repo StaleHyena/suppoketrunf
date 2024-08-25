@@ -18,6 +18,8 @@
 #define IIF_0(t,f) f
 #define IIF_1(t,f) t
 #define DPRINTF(fmt, ...) IIF(DEBUG_PRINT)(fprintf(stderr, fmt, __VA_ARGS__),)
+#define M2STRI(x) #x
+#define M2STR(x) M2STRI(x)
 
 uint64_t powil(uint8_t base, uint8_t exp);
 

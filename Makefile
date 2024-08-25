@@ -44,6 +44,9 @@ debug: $(targets)
 profile: CFLAGS := $(CFLAGS) -O3 -p -g
 profile: $(targets)
 
+address-san: CFLAGS := $(CFLAGS) -O0 -g -fsanitize=address
+address-san: $(targets)
+
 $(csv): $(CURL)
 	$(CURL) $(csv_url) | sed "1s/^/#/" > $@
 
@@ -56,7 +59,7 @@ pokemon_baked_hashed_names.c: code_generators/bake_hashtable.py $(csv)
 %.o: %.c %.h
 	$(COMPILE.c) -o $@ $(filter %.c,$^)
 
-.PHONY: all clean
+.PHONY: all clean release debug profile address-san
 
 clean:
 	$(RM) *.o pokemon_baked_hashed_names.c pokemon.h $(targets)

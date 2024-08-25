@@ -39,8 +39,8 @@ typedef struct {
   size_t total_cards;
   enum game_state state;
   queue_t *draw_winnings;
-  int draw_bitmask;
-  int playing_bitmask;
+  uint16_t draw_bitmask;
+  uint16_t playing_bitmask;
 } game_t;
 
 char *

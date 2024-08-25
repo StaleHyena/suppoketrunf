@@ -56,8 +56,12 @@ game_repr_sall(game_t* g) {
   for (int i = 0; i < g->player_cnt; i++) {
     assert(off < GRMAX);
     off += snprintf(buf+off, GRMAX-off,
-        "  jogador %d: %s\n",
-        i, player_repr_sall(g->players + i)
+        "  jogador %d%s: %s\n",
+        i, 
+        ((g->playing_bitmask >> i) & 0b1)?
+          ((g->draw_bitmask >> i) & 0b1)? " (draw and playing)" : " (playing)"
+          : " (out)",
+        player_repr_sall(g->players + i)
       );
   }
   assert(off < GRMAX);
@@ -211,18 +215,17 @@ game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
 
 round_result_t
 game_resolve_draw(game_t *g) {
-  pokemon_stats_t pstats[MAX_PLAYERS] = {0};
-  
   // which player should choose?
   int active_bak = g->player_active;
   int effective_active = g->player_active;
   for (int i = 0; i < g->player_cnt; i++) {
-    if ((g->draw_bitmask >> i) & 0b1) break;
+    if ((g->draw_bitmask >> effective_active) & 0b1) break;
     effective_active = (effective_active + 1) % g->player_cnt;
   }
 
   // effective_active now is the correct "next chooser"
   g->player_active = effective_active;
+  DPRINTF("effective_active is %d\n", effective_active);
   round_result_t r = game_calc_round(g, g->draw_bitmask & g->playing_bitmask, g->draw_winnings);
   g->player_active = active_bak;
 
