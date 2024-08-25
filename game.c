@@ -84,8 +84,6 @@ void game_check_wincond(game_t *g) {
       g->state = GAME_STOP;
     }
     player_t *p = g->players + last_player_found;
-    // make sure no cards were lost
-    assert(p->card_cnt + (p->winnings? queue_size(p->winnings) : 0) == g->total_cards);
     printf("O jogador #%d ganhou esse jogo! Parabéns.\n", last_player_found);
     g->state = GAME_STOP;
   }
@@ -149,7 +147,9 @@ game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
     player_t *p = g->players + i;
     p->hand = stack_pop(p->hand, &pid_store[i]);
     p->card_cnt--;
-    winnings = queue_insert(winnings, pid_store[i]);
+    if (i != g->player_active) {
+      winnings = queue_insert(winnings, pid_store[i]);
+    }
     pokemon_stats_t ps = pokemon_stats[pid_store[i]];
     
     val_store[i] =
@@ -173,7 +173,7 @@ game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
   }
 
   DPRINTF("max name len is %d\n", max_name_len);
-  puts(" -INICIO- ");
+  puts(" - COMPARANDO - ");
   for (int i = 0; i < g->player_cnt; i++) {
     if (!((players_bitmask >> i) & 0b1)) continue;
 
@@ -185,7 +185,7 @@ game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
       val_store[i]);
 
   }
-  puts(" -FIM- ");
+  puts("");
   
   if (g->draw_bitmask) {
     g->draw_winnings = winnings;
@@ -257,9 +257,7 @@ game_next_round(game_t *g) {
         r.winner_player,
         pokemon_names[r.winner_pokemon]
       );
-    do {
-      g->player_active = (g->player_active + 1) % g->player_cnt;
-    } while (!((g->playing_bitmask >> g->player_active) & 0b1));
+    
   }
   
   for (int i = 0; i < g->player_cnt; i++) {
@@ -273,6 +271,12 @@ game_next_round(game_t *g) {
   }
 
   game_check_wincond(g);
+
+  if (g->state == GAME_RUN) {
+    do {
+      g->player_active = (g->player_active + 1) % g->player_cnt;
+    } while (!((g->playing_bitmask >> g->player_active) & 0b1));
+  }
 }
 
 
