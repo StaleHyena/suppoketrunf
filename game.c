@@ -111,7 +111,7 @@ round_result_t
 game_calc_round(game_t *g, int players_bitmask, stack_t winnings) {
   // Make sure the active player is part of the round
   assert(BIT_GET(players_bitmask, g->player_active));
-
+  
   round_result_t r = {0};
 
   player_t *p2play = g->players + g->player_active;
@@ -189,7 +189,7 @@ game_calc_round(game_t *g, int players_bitmask, stack_t winnings) {
     int best_is_leg = BIT_GET(legendary_bitmask, r.winner_player);
     is_best = 0
       || (ps.legendary && !best_is_leg) // legendary beats lower rarities
-      || diff > 0; // higher score
+      || (diff > 0 && ps.legendary == leg_found); // higher score
     is_draw = 1
       && (best_is_leg == ps.legendary) // rarity must match
       && diff == 0; // score must match
@@ -296,6 +296,11 @@ void
 game_next_round(game_t *g) {
   round_result_t r = {0};
   
+  if (!g->player_cnt) {
+    fprintf(stderr, "Jogo sem jogadores!\n");
+    g->state = GAME_STOP;
+    return;
+  }
   if (g->state == GAME_RUN_DRAW) {
     r = game_resolve_draw(g);
   } else {
@@ -349,6 +354,4 @@ game_free(game_t *g) {
     player_free(g->players + i);
   }
 }
-
-
 

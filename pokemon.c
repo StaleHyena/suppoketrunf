@@ -156,8 +156,10 @@ int computer_driver(int pid) {
 
 void pokedex() {
   char buf[32] = {0};
-  while(fgets(buf, 32, stdin) != NULL
-     && strncmp(buf, "quit\n", 32) != 0)
+  while((
+    printf("Pesquisa por nome: "),
+    fgets(buf, 32, stdin) != NULL)
+    && strncmp(buf, "quit\n", 32) != 0)
   {
     size_t buflen = strlen(buf);
     
@@ -206,7 +208,7 @@ int main(int argc, char **argv) {
   char buf[32] = {0};
   while(menu_stage < 5 && menu_stage >= 0) {
     const char *questions[] = {
-      "Jogo ou pokedex? ([J]ogo | [p]okedex) ",
+      "Jogo ou pesquisa na pokedex? ([J]ogo | [p]okedex) ",
       "Quantos jogadores? [0.." M2STR(MAX_PLAYERS) "] (4) ",
       "Quantas cartas por pessoa? (8) ",
       "Seed específica? (derivada do [T]empo | <valor>) ",
