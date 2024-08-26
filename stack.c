@@ -37,7 +37,7 @@ stack_peek(stack_t handle, stack_value_t *out) {
 void
 stack_free(stack_t handle) {
   stack_value_t _;
-  while(stack_pop(handle, &_));
+  while(handle = stack_pop(handle, &_));
 }
 
 char *stack_debug_str_sall4(stack_t handle) {

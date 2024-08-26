@@ -13,6 +13,12 @@ player_alloc(stack_t *take_pile, size_t card_cnt, player_driver_fptr driver) {
   return r;
 }
 
+void
+player_free(player_t *p) {
+  if (p->winnings) queue_free(p->winnings);
+  if (p->hand) stack_free(p->hand);
+}
+
 // Returns how big the new hand is
 int player_extrahand(player_t* p) {
   if (!p->winnings) return 0;
@@ -71,7 +77,6 @@ game_repr_sall(game_t* g) {
 #undef GRMAX
 }
 
-// Side effect: pushes winnings to hand if needed
 void game_check_wincond(game_t *g) {
   int players_left = 0;
   int last_player_found = -1;
@@ -84,7 +89,7 @@ void game_check_wincond(game_t *g) {
 
   if (players_left == 1) {
     if (last_player_found < 0) {
-      printf("Ninguém ganhou! (??)\n");
+      printf("Ninguém ganhou! (?)\n");
       g->state = GAME_STOP;
     }
     player_t *p = g->players + last_player_found;
@@ -129,10 +134,12 @@ game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
     return r;
   }
   r.stat_name =
-      r.choice == 1? "TOTAL"
-    : r.choice == 2? "HP"
-    : r.choice == 3? "ATK"
-    : r.choice == 4? "DEF" : "UNK STAT";
+      r.choice == 1? "HP"
+    : r.choice == 2? "ATK"
+    : r.choice == 3? "DEF"
+    : r.choice == 4? "SP. ATK"
+    : r.choice == 5? "SP. DEF"
+    : "UNK STAT";
 
   printf("Jogador #%d selecionou a estatística %s!\n", g->player_active, r.stat_name);
 
@@ -151,16 +158,16 @@ game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
     player_t *p = g->players + i;
     p->hand = stack_pop(p->hand, &pid_store[i]);
     p->card_cnt--;
-    if (i != g->player_active) {
-      winnings = queue_insert(winnings, pid_store[i]);
-    }
+    winnings = queue_insert(winnings, pid_store[i]);
     pokemon_stats_t ps = pokemon_stats[pid_store[i]];
     
     val_store[i] =
-        r.choice == 1? ps.total
-      : r.choice == 2? ps.hp
-      : r.choice == 3? ps.attack
-      : r.choice == 4? ps.defense : -1;
+        r.choice == 1? ps.hp
+      : r.choice == 2? ps.attack
+      : r.choice == 3? ps.defense
+      : r.choice == 4? ps.sp_attack
+      : r.choice == 5? ps.sp_defense
+      : -1;
 
     int nlen = strlen(pokemon_names[pid_store[i]]);
     max_name_len = (nlen > max_name_len)? nlen : max_name_len;
@@ -232,6 +239,28 @@ game_resolve_draw(game_t *g) {
   return r;
 }
 
+game_t
+game_new(stack_t (*gen_cards_f)(size_t size), player_driver_fptr *player_drivers, int player_cnt, int cards_per_player, long prng_seed) {
+  game_t g = {0};
+  g.total_cards = player_cnt * cards_per_player;
+  g.player_cnt = player_cnt;
+  g.playing_bitmask = ~0;
+  
+  srand(prng_seed);
+  printf("seed do prng é %ld\n", prng_seed);
+  printf("número de jogadores é %d.\n", g.player_cnt);
+  printf("número de cartas em jogo é %d.\n", g.total_cards);
+  stack_t pokes = gen_cards_f(g.total_cards);
+
+  for (int i = 0; i < g.player_cnt; i++) {
+    g.players[i] = player_alloc(
+        &pokes,
+        cards_per_player,
+        player_drivers[i]);
+  }
+  return g;
+}
+
 void
 game_next_round(game_t *g) {
   round_result_t r = {0};
@@ -240,7 +269,7 @@ game_next_round(game_t *g) {
     r = game_resolve_draw(g);
   } else {
     // magic size queue since they don't resize yet, FIXME
-    queue_t *winnings = queue_alloc(g->player_cnt * g->total_cards);
+    queue_t *winnings = queue_alloc(g->total_cards);
     r = game_calc_round(g, g->playing_bitmask, winnings); // takes ownership of `winnings`
   }
   
@@ -281,5 +310,15 @@ game_next_round(game_t *g) {
     } while (!((g->playing_bitmask >> g->player_active) & 0b1));
   }
 }
+
+void
+game_free(game_t *g) {
+  if (g->draw_winnings) queue_free(g->draw_winnings);
+
+  for (int i = 0; i < g->player_cnt; i++) {
+    player_free(g->players + i);
+  }
+}
+
 
 

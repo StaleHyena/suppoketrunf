@@ -21,6 +21,8 @@ typedef struct {
 
 player_t
 player_alloc(stack_t *take_pile, size_t card_cnt, player_driver_fptr driver);
+void
+player_free(player_t *p);
 
 char *
 player_repr_sall(player_t*);
@@ -46,7 +48,13 @@ typedef struct {
 char *
 game_repr_sall(game_t*);
 
+game_t
+game_new(stack_t (*gen_cards_f)(size_t size), player_driver_fptr *, int player_cnt, int cards_per_player, long prng_seed);
+
 void
 game_next_round(game_t*);
+
+void
+game_free(game_t*);
 
 #endif // GAME_H__

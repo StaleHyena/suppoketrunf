@@ -25,12 +25,13 @@ char *pokecard_repr_simplestr_salloc_aligned(uint16_t uid, size_t namelen, size_
     }
   }
   offs += snprintf(buf + offs, BUFSZ - offs,
-      " TOTAL %3d"
       " HP %3d"
       " ATK %3d"
       " DEF %3d"
+      " SP. ATK %3d"
+      " SP. DEF %3d"
       " GROUP %c",
-      s.total, s.hp, s.attack, s.defense,
+      s.hp, s.attack, s.defense, s.sp_attack, s.sp_defense,
       card_group_char(pokecard_group_of(uid))
     );
   return buf;
@@ -45,39 +46,7 @@ card_group_t
 pokecard_group_of(uint16_t uid) {
   int first = pokemon_types[uid][0];
 
-  /* Old balancing, considering both primary and secondary types
-#define IS(TYPE) (first == TYPE || second == TYPE)
-
-  if (0
-      || IS(Ground)
-      || IS(Rock)
-      || IS(Bug)
-      || IS(Grass)
-      || IS(Fighting))
-    return GROUP_A;
-  else if (0
-      || IS(Normal)
-      || IS(Poison)
-    ) return GROUP_B;
-  else if (0
-      || IS(Water)
-      || IS(Psychic)
-      || IS(Electric)
-    ) return GROUP_C;
-  else if (0
-      || IS(Ice)
-      || IS(Dragon)
-      || IS(Dark)
-      || IS(Fairy)
-      || IS(Flying)
-      || IS(Fire)
-      || IS(Steel)
-      || IS(Ghost)
-    ) return GROUP_D;
-#undef IS
-  */
-
-  /* Simplified groups */
+  // These only make sense for the 1st gen, FIXME
 #define IS(TYPE) (first == TYPE)
     if (0 // 42 pokes
       || IS(Normal)

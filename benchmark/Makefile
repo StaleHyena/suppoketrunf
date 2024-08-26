@@ -11,6 +11,7 @@ deps := main.c $(addprefix ../,btree.o queue.o utils.o \
 	pokemon_tables.o pokemon_dyntables.o \
 	pokemon_baked_hashed_names.o btree_fuzzy_search.o)
 csv := ../pokemon.csv
+pyvenv := ../.spt_venv
 
 all: $(targets)
 
@@ -28,7 +29,7 @@ result.json: bench-normal \
 	$(PROF) $< $*.out > $@
 
 %.dot: %.prof
-	(. ./.venv/bin/activate; gprof2dot -n 0 -e 0 > $@ < $^; deactivate)
+	(. $(pyvenv)/bin/activate; gprof2dot -n 0 -e 0 > $@ < $^; deactivate)
 
 %.png: %.p.dot
 	$(DOT) -Tpng -o $@ < $<

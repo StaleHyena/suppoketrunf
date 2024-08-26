@@ -7,21 +7,21 @@ if (len(sys.argv) < 2):
     exit()
 
 fname = sys.argv[1];
-filter_func = lambda i,n,v,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen: True;
+filter_func = lambda i,n,v,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen,leg: True;
 if (len(sys.argv) >= 3):
-    filter_func = lambda i,n,v,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen: eval(sys.argv[2]);
+    filter_func = lambda i,n,v,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen,leg: eval(sys.argv[2]);
 
 with open(fname, newline='') as pkfile:
     nocomments = filter(lambda l: l[0] != '#' if len(l) > 0 else False, pkfile);
     pkr = csv.reader(nocomments, delimiter=',');
     for row in pkr:
-        i,n,v,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen = row;
-        p = filter_func(i,n,v,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen);
+        i,n,v,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen,leg = row;
+        p = filter_func(i,n,v,t1,t2,tot,hp,atks,defs,satks,sdefs,spd,gen,leg);
         if not p:
             continue;
         n = f'"{n}"' if not v.strip() else f'"{n} ({v})"';
         nlen = len(n);
         if (not t2.strip()):
             t2 = "Undef";
-        args = ",".join([i,n,str(nlen),t1,t2,tot,hp,atks,defs,gen]);
+        args = ",".join([i,n,str(nlen),t1,t2,hp,atks,defs,satks,sdefs,leg]);
         print(f"X({args})");

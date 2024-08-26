@@ -38,7 +38,7 @@ enum pokemon_types_t {
 #undef X
 
 typedef struct {
-  int total, hp, attack, defense, generation;
+  int hp, attack, defense, sp_attack, sp_defense, legendary;
 } pokemon_stats_t;
 
 const char *pokemon_type_repr_str(int type_id);

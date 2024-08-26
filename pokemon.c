@@ -120,13 +120,13 @@ stack_t random_pile(size_t s) {
 int player_driver(int pid) {
   printf("Tua vez! teu pokemon é:\n\t%s\n"
       "Qual tua escolha? "
-      "(1 - TOTAL; 2 - HP; 3 - ATK; 4 - DEF)\n",
+      "(1 - HP; 2 - ATK; 3 - DEF; 4 - SP. ATK; 5 - SP. DEF)\n",
       pokecard_repr_simplestr_salloc(pid));
   int choice = -1;
   char buf[8] = {0};
   while (fgets(buf, 8, stdin) != NULL) {
     choice = atoi(buf);
-    if (choice < 1 && choice > 4) {
+    if (choice < 1 && choice > 5) {
       printf("Valor inválido, tente novamente!");
     } else { break; }
   }
@@ -137,33 +137,12 @@ int computer_driver(int pid) {
   int choice = 0;
   pokemon_stats_t ps = pokemon_stats[pid];
   int biggest = 0;
-  if (ps.total > biggest) { biggest = ps.total; choice = 1; }
-  if (ps.hp > biggest) { biggest = ps.hp; choice = 2; }
-  if (ps.attack > biggest) { biggest = ps.attack; choice = 3; }
-  if (ps.defense > biggest) { biggest = ps.defense; choice = 4; }
+  if (ps.hp > biggest)         { biggest = ps.hp; choice = 1; }
+  if (ps.attack > biggest)     { biggest = ps.attack; choice = 2; }
+  if (ps.defense > biggest)    { biggest = ps.defense; choice = 3; }
+  if (ps.sp_attack > biggest)  { biggest = ps.sp_attack; choice = 4; }
+  if (ps.sp_defense > biggest) { biggest = ps.sp_defense; choice = 5; }
   return choice;
-}
-
-game_t new_game(player_driver_fptr *player_drivers, int player_cnt, int total_cards, long prng_seed) {
-
-  game_t g = {0};
-  g.total_cards = total_cards;
-  g.player_cnt = player_cnt;
-  g.playing_bitmask = ~0;
-  
-  srand(prng_seed);
-  printf("seed do prng é %ld\n", prng_seed);
-  printf("número de jogadores é %d.\n", g.player_cnt);
-  printf("número de cartas em jogo é %d.\n", g.total_cards);
-  stack_t pokes = random_pile(g.total_cards);
-
-  for (int i = 0; i < g.player_cnt; i++) {
-    g.players[i] = player_alloc(
-        &pokes,
-        g.total_cards/g.player_cnt,
-        player_drivers[i]);
-  }
-  return g;
 }
 
 void pokedex() {
@@ -193,11 +172,12 @@ void pokedex() {
 }
 
 int main(int argc, char **argv) {
-  int pc = 4, tc = 32;
+  // player count, and cards per player
+  int pc = 4, cpp = 32;
   long seed = time(NULL);
   int menu_stage = 0;
   if (argc >= 2) {
-    if (argv[1][0] == 'p') {
+    if (argv[1][0] == 'p' || argv[1][0] == 'P') {
       menu_stage = -1;
     } else {
       pc = atoi(argv[1]);
@@ -205,7 +185,7 @@ int main(int argc, char **argv) {
     }
   }
   if (argc >= 3) {
-    tc = atoi(argv[2]);
+    cpp = atoi(argv[2]);
     menu_stage = 3;
   }
   if (argc >= 4) {
@@ -238,7 +218,7 @@ int main(int argc, char **argv) {
             break;
           case 'P':
           case 'p':
-            menu_stage = 5;
+            menu_stage = -1;
             break;
         }
         break;
@@ -248,7 +228,7 @@ int main(int argc, char **argv) {
         }
         menu_stage = 2;
         break;
-      case 2: if (buflen != 0) tc = v; menu_stage = 3; break;
+      case 2: if (buflen != 0) cpp = v; menu_stage = 3; break;
       case 3: if (buflen != 0) seed = v; menu_stage = 4; break;
       case 4:
         for (int i = 0; i < pc; i++) {
@@ -277,7 +257,7 @@ loop_break: break;
   if (menu_stage == -1) {
     pokedex();
   } else {
-    game_t g = new_game(drivers, pc, tc, seed);
+    game_t g = game_new(random_pile, drivers, pc, cpp, seed);
 
     while (g.state != GAME_STOP) {
       DPRINTF("%s\n", game_repr_sall(&g));
@@ -285,6 +265,7 @@ loop_break: break;
     }
     
     puts(game_repr_sall(&g));
+    game_free(&g);
   }
 
   return 0;
