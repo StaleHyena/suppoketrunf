@@ -16,5 +16,6 @@ stack_t stack_pop(stack_t, stack_value_t *);
 char *stack_debug_str_sall4(stack_t handle);
 int stack_peek(stack_t, stack_value_t *);
 void stack_free(stack_t);
+size_t stack_size(stack_t);
 
 #endif // STACK_H__

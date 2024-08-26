@@ -15,7 +15,7 @@ player_alloc(stack_t *take_pile, size_t card_cnt, player_driver_fptr driver) {
 
 void
 player_free(player_t *p) {
-  if (p->winnings) queue_free(p->winnings);
+  if (p->winnings) stack_free(p->winnings);
   if (p->hand) stack_free(p->hand);
 }
 
@@ -23,11 +23,10 @@ player_free(player_t *p) {
 int player_extrahand(player_t* p) {
   if (!p->winnings) return 0;
   int total = 0;
-  for (queue_value_t pid = -1; queue_remove(p->winnings, &pid); total++) {
+  for (stack_value_t pid = -1; p->winnings = stack_pop(p->winnings, &pid); total++) {
     p->hand = stack_push(p->hand, pid);
   }
   p->card_cnt = total;
-  queue_free(p->winnings);
   p->winnings = NULL;
   return total;
 }
@@ -42,7 +41,7 @@ char *player_repr_sall(player_t* p) {
       "carta topo %s%s, com %zu+%zu cartas na mão.",
       has_cards? "é " : "não existe",
       has_cards? pokecard_repr_simplestr_salloc(tcpid) : "",
-      p->card_cnt, p->winnings? queue_size(p->winnings) : 0
+      p->card_cnt, p->winnings? stack_size(p->winnings) : 0
     );
   return buf;
 #undef PRMAX
@@ -64,14 +63,16 @@ game_repr_sall(game_t* g) {
     off += snprintf(buf+off, GRMAX-off,
         "  jogador %d%s: %s\n",
         i, 
-        ((g->playing_bitmask >> i) & 0b1)?
-          ((g->draw_bitmask >> i) & 0b1)? " (draw and playing)" : " (playing)"
-          : " (out)",
+        BIT_GET(g->playing_bitmask, i)?
+          BIT_GET(g->draw_bitmask, i)?
+            " (empatado)"
+          : "           "
+        : "     (fora)",
         player_repr_sall(g->players + i)
       );
   }
   assert(off < GRMAX);
-  snprintf(buf+off, GRMAX-off, "próximo a jogar é o jogador %d.\n", g->player_active);
+  snprintf(buf+off, GRMAX-off, "próximo a jogar pode ser o jogador %d.\n", g->player_active);
 
   return buf;
 #undef GRMAX
@@ -81,7 +82,7 @@ void game_check_wincond(game_t *g) {
   int players_left = 0;
   int last_player_found = -1;
   for (int i = 0; i < g->player_cnt; i++) {
-    if ((g->playing_bitmask >> i) & 0b1) {
+    if (BIT_GET(g->playing_bitmask, i)) {
       players_left++;
       last_player_found = i;
     }
@@ -103,11 +104,11 @@ typedef struct {
   int winner_pokemon;
   int choice;
   const char *stat_name;
-  queue_t *winnings;
+  stack_t winnings;
 } round_result_t;
 
 round_result_t
-game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
+game_calc_round(game_t *g, int players_bitmask, stack_t winnings) {
   // Make sure the active player is part of the round
   assert(BIT_GET(players_bitmask, g->player_active));
 
@@ -142,8 +143,8 @@ game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
 
   printf("Jogador #%d selecionou a estatística %s!\n", g->player_active, r.stat_name);
 
-  // And the round winner is decided
-  // checking for possible draws
+  // And the round winner is decided,
+  // while checking for possible draws
   r.winner_player = -1;
   g->draw_bitmask = 0;
 
@@ -159,7 +160,7 @@ game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
     player_t *p = g->players + i;
     p->hand = stack_pop(p->hand, &pid_store[i]);
     p->card_cnt--;
-    winnings = queue_insert(winnings, pid_store[i]);
+    winnings = stack_push(winnings, pid_store[i]);
     pokemon_stats_t ps = pokemon_stats[pid_store[i]];
 
     int val =
@@ -206,38 +207,43 @@ game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
     }
   }
 
+  // Display results
   DPRINTF("max name len is %d\n", max_name_len);
   puts(" - COMPARANDO - ");
   for (int i = 0; i < g->player_cnt; i++) {
-    if (!((players_bitmask >> i) & 0b1)) continue;
+    if (!BIT_GET(players_bitmask, i)) continue;
 
-    printf("%s#%d: %s (%s %d)\n",
+    printf("%s#%d: %s (%s %d)%s\n",
       (i == g->player_active)? "> " : "  ",
       i,
       pokecard_repr_simplestr_salloc_aligned(pid_store[i], max_name_len, 20),
       r.stat_name,
-      val_store[i]);
+      val_store[i],
+      g->draw_bitmask?
+        (i & g->draw_bitmask)? " ^" : ""
+      : (i == r.winner_player)? " @" : "");
 
   }
   puts("");
   
-  if (g->draw_bitmask) {
-    g->draw_winnings = winnings;
+  int round_drawn = g->draw_bitmask > 0;
+  if (round_drawn) {
+    g->draw_winnings = winnings; // no payout! save it for the next round
     g->state = GAME_RUN_DRAW;
   } else {
     g->state = GAME_RUN; // bring it back to normal if the prev
                          // round was a draw
+    // process the payout
     player_t *winner = g->players + r.winner_player;
-    queue_t *old_q = winner->winnings;
+    stack_t old_q = winner->winnings;
     winner->winnings = winnings;
 
-    // Combine winnings queues
+    // Combine winnings
     if (old_q) {
-      queue_value_t pid = -1;
-      while (queue_remove(old_q, &pid)) {
-        queue_insert(winner->winnings, pid);
+      stack_value_t pid = -1;
+      while (old_q = stack_pop(old_q, &pid)) {
+        winner->winnings = stack_push(winner->winnings, pid);
       }
-      queue_free(old_q);
     }
   }
   return r;
@@ -249,7 +255,7 @@ game_resolve_draw(game_t *g) {
   int active_bak = g->player_active;
   int effective_active = g->player_active;
   for (int i = 0; i < g->player_cnt; i++) {
-    if ((g->draw_bitmask >> effective_active) & 0b1) break;
+    if (BIT_GET(g->draw_bitmask, effective_active)) break;
     effective_active = (effective_active + 1) % g->player_cnt;
   }
 
@@ -293,9 +299,7 @@ game_next_round(game_t *g) {
   if (g->state == GAME_RUN_DRAW) {
     r = game_resolve_draw(g);
   } else {
-    // magic size queue since they don't resize yet, FIXME
-    queue_t *winnings = queue_alloc(g->total_cards);
-    r = game_calc_round(g, g->playing_bitmask, winnings); // takes ownership of `winnings`
+    r = game_calc_round(g, g->playing_bitmask, NULL); // takes ownership of `winnings`
   }
   
   if (g->state == GAME_CANCEL_ROUND) {
@@ -305,7 +309,7 @@ game_next_round(game_t *g) {
   if (g->state == GAME_RUN_DRAW) {
     printf("\tEmpate entre os jogadores");
     for (int i = 0; i < MAX_PLAYERS; i++) {
-      if ((g->draw_bitmask >> i) & 0b1) printf(" #%d", i);
+      if (BIT_GET(g->draw_bitmask, i)) printf(" #%d", i);
     }
     printf("! Próximo round será entre eles.\n");
   } else {
@@ -330,15 +334,16 @@ game_next_round(game_t *g) {
   game_check_wincond(g);
 
   if (g->state == GAME_RUN) {
+    // Pass the ball to the next one over
     do {
       g->player_active = (g->player_active + 1) % g->player_cnt;
-    } while (!((g->playing_bitmask >> g->player_active) & 0b1));
+    } while (!BIT_GET(g->playing_bitmask, g->player_active));
   }
 }
 
 void
 game_free(game_t *g) {
-  if (g->draw_winnings) queue_free(g->draw_winnings);
+  if (g->draw_winnings) stack_free(g->draw_winnings);
 
   for (int i = 0; i < g->player_cnt; i++) {
     player_free(g->players + i);

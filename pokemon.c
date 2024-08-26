@@ -107,7 +107,8 @@ stack_t random_pile(size_t s) {
   stack_t pokes = NULL;
   
   for (int i = 0; i < pokemon_count; i++) {
-    if (pokemon_stats[i].legendary) {
+    // cheeky little way to test legendary combat
+    if (1 || pokemon_stats[i].legendary) {
       pokes = stack_push(pokes, i);
     }
   }

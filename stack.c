@@ -40,6 +40,15 @@ stack_free(stack_t handle) {
   while(handle = stack_pop(handle, &_));
 }
 
+size_t stack_size(stack_t s) {
+  size_t acc = 0;
+  while(s->next) {
+    s = s->next;
+    acc++;
+  }
+  return acc;
+}
+
 char *stack_debug_str_sall4(stack_t handle) {
   #define BUFSZ 256
   static char buf[4][BUFSZ] = {0};

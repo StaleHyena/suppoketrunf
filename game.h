@@ -14,8 +14,8 @@ typedef int (*player_driver_fptr)(int);
 
 typedef struct {
   stack_t hand;
-  size_t card_cnt;
-  queue_t *winnings;
+  size_t card_cnt; // holdover from when we didn't have `stack_size`
+  stack_t winnings;
   player_driver_fptr driver;
 } player_t;
 
@@ -40,7 +40,7 @@ typedef struct {
   size_t player_active;
   size_t total_cards;
   enum game_state state;
-  queue_t *draw_winnings;
+  stack_t draw_winnings;
   uint16_t draw_bitmask;
   uint16_t playing_bitmask;
 } game_t;
