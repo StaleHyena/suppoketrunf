@@ -107,9 +107,17 @@ stack_t random_pile(size_t s) {
   stack_t pokes = NULL;
   
   for (int i = 0; i < pokemon_count; i++) {
-    pokes = stack_push(pokes, i);
+    if (pokemon_stats[i].legendary) {
+      pokes = stack_push(pokes, i);
+    }
   }
 
+  // hell yeah
+  pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, pokemon_count);
+  pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, pokemon_count);
+  pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, pokemon_count);
+  pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, pokemon_count);
+  pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, pokemon_count);
   pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, pokemon_count);
   pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, pokemon_count);
   pokes = very_inefficient_but_respecting_of_the_stack_api_shuffle_algo(pokes, pokemon_count);
@@ -173,7 +181,7 @@ void pokedex() {
 
 int main(int argc, char **argv) {
   // player count, and cards per player
-  int pc = 4, cpp = 32;
+  int pc = 4, cpp = 8;
   long seed = time(NULL);
   int menu_stage = 0;
   if (argc >= 2) {
@@ -195,11 +203,11 @@ int main(int argc, char **argv) {
 
   player_driver_fptr drivers[MAX_PLAYERS] = {0};
   char buf[32] = {0};
-  while(menu_stage < 5) {
+  while(menu_stage < 5 && menu_stage >= 0) {
     const char *questions[] = {
       "Jogo ou pokedex? ([J]ogo | [p]okedex) ",
       "Quantos jogadores? [0.." M2STR(MAX_PLAYERS) "] (4) ",
-      "Quantas cartas em jogo? (32) ",
+      "Quantas cartas por pessoa? (8) ",
       "Seed específica? (derivada do [T]empo | <valor>) ",
       "Configuração de jogadores:\n"
     };
@@ -232,14 +240,14 @@ int main(int argc, char **argv) {
       case 3: if (buflen != 0) seed = v; menu_stage = 4; break;
       case 4:
         for (int i = 0; i < pc; i++) {
-          driver_choice: printf("Jogador #%d real ou computador? (R/c) ", i);
+          driver_choice: printf("Jogador #%d real ou computador? (r/C) ", i);
           if (fgets(buf, 32, stdin) == NULL) goto loop_break;
           switch (buf[0]) {
-            case '\n':
             case 'r':
             case 'R':
               drivers[i] = player_driver;
               break;
+            case '\n':
             case 'c':
             case 'C':
               drivers[i] = computer_driver;
@@ -248,7 +256,6 @@ int main(int argc, char **argv) {
         }
         menu_stage = 5;
       } break;
-      case -1: goto loop_break;
     }
     continue;
 loop_break: break;

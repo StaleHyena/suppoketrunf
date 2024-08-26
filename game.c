@@ -33,7 +33,7 @@ int player_extrahand(player_t* p) {
 }
 
 char *player_repr_sall(player_t* p) {
-#define PRMAX 128
+#define PRMAX 256
   static char buf[PRMAX] = {0};
   int tcpid = 0;
   int has_cards = stack_peek(p->hand, &tcpid);
@@ -50,7 +50,7 @@ char *player_repr_sall(player_t* p) {
 
 char *
 game_repr_sall(game_t* g) {
-#define GRMAX 4096
+#define GRMAX 8192
   static char buf[GRMAX] = {0};
   size_t off = 0;
   off += snprintf(buf+off, GRMAX-off, "jogo com %d jogadores (%s):\n",
@@ -100,7 +100,6 @@ void game_check_wincond(game_t *g) {
 
 typedef struct {
   int winner_player;
-  int winner_value;
   int winner_pokemon;
   int choice;
   const char *stat_name;
@@ -110,14 +109,14 @@ typedef struct {
 round_result_t
 game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
   // Make sure the active player is part of the round
-  assert((players_bitmask >> g->player_active) & 0b1);
+  assert(BIT_GET(players_bitmask, g->player_active));
 
   round_result_t r = {0};
 
   player_t *p2play = g->players + g->player_active;
   // The player takes his pick of stat
   int cpid = 0;
-  // What if no hand? FIXME
+  // always will have a card, since it's guaranteed to be an active player
   stack_peek(p2play->hand, &cpid);
   r.choice = p2play->driver(cpid);
   if (!r.choice) {
@@ -146,22 +145,24 @@ game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
   // And the round winner is decided
   // checking for possible draws
   r.winner_player = -1;
-  r.winner_value = -1;
-  r.winner_pokemon = -1;
   g->draw_bitmask = 0;
+
+  uint16_t best_bitmask = 0;
+  int best = -1;
+  uint16_t legendary_bitmask = 0;
   
   int pid_store[MAX_PLAYERS] = {-1};
   int val_store[MAX_PLAYERS] = {-1};
   int max_name_len = 0;
   for (int i = 0; i < g->player_cnt; i++) {
-    if (!((players_bitmask >> i) & 0b1)) continue;
+    if (!BIT_GET(players_bitmask, i)) continue;
     player_t *p = g->players + i;
     p->hand = stack_pop(p->hand, &pid_store[i]);
     p->card_cnt--;
     winnings = queue_insert(winnings, pid_store[i]);
     pokemon_stats_t ps = pokemon_stats[pid_store[i]];
-    
-    val_store[i] =
+
+    int val =
         r.choice == 1? ps.hp
       : r.choice == 2? ps.attack
       : r.choice == 3? ps.defense
@@ -169,17 +170,39 @@ game_calc_round(game_t *g, int players_bitmask, queue_t *winnings) {
       : r.choice == 5? ps.sp_defense
       : -1;
 
+    val_store[i] = val;
+
     int nlen = strlen(pokemon_names[pid_store[i]]);
     max_name_len = (nlen > max_name_len)? nlen : max_name_len;
 
-        
-    if (val_store[i] > r.winner_value) {
+    int is_best = 0;
+    int is_draw = 0;
+    
+    int diff = val - best;
+    
+    if (ps.legendary) {
+      legendary_bitmask = BIT_SET(legendary_bitmask, i);
+    }
+
+    int leg_found = legendary_bitmask > 0;
+    int best_is_leg = BIT_GET(legendary_bitmask, r.winner_player);
+    is_best = 0
+      || (ps.legendary && !best_is_leg) // legendary beats lower rarities
+      || diff > 0; // higher score
+    is_draw = 1
+      && (best_is_leg == ps.legendary) // rarity must match
+      && diff == 0; // score must match
+
+    if (is_best) {
       r.winner_player = i;
-      r.winner_value = val_store[i];
       r.winner_pokemon = pid_store[i];
-      g->draw_bitmask = 0;
-    } else if (val_store[i] == r.winner_value) {
-      g->draw_bitmask |= (1 << i) | (1 << r.winner_player);
+      best = val;
+      g->draw_bitmask = 0; // any previous draw is no more
+    } else if (is_draw) {
+      // place both pokemons on the draw list
+      g->draw_bitmask = 0
+        | BIT_SET(g->draw_bitmask, i)
+        | BIT_SET(g->draw_bitmask, r.winner_player);
     }
   }
 
@@ -234,6 +257,8 @@ game_resolve_draw(game_t *g) {
   g->player_active = effective_active;
   DPRINTF("effective_active is %d\n", effective_active);
   round_result_t r = game_calc_round(g, g->draw_bitmask & g->playing_bitmask, g->draw_winnings);
+  g->draw_winnings = NULL; // since game_calc_round takes ownership of it
+                           // (segfault during cleanup otherwise!)
   g->player_active = active_bak;
 
   return r;

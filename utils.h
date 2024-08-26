@@ -21,6 +21,9 @@
 #define M2STRI(x) #x
 #define M2STR(x) M2STRI(x)
 
+#define BIT_GET(x,pos) ((x >> pos) & 0b1)
+#define BIT_SET(x,pos) (x | (0b1 << pos))
+
 uint64_t powil(uint8_t base, uint8_t exp);
 
 typedef struct { int take; uint64_t val; } visitor_result_t;

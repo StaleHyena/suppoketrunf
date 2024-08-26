@@ -30,9 +30,11 @@ char *pokecard_repr_simplestr_salloc_aligned(uint16_t uid, size_t namelen, size_
       " DEF %3d"
       " SP. ATK %3d"
       " SP. DEF %3d"
-      " GROUP %c",
+      " GROUP %c"
+      "%s",
       s.hp, s.attack, s.defense, s.sp_attack, s.sp_defense,
-      card_group_char(pokecard_group_of(uid))
+      card_group_char(pokecard_group_of(uid)),
+      s.legendary? " ! LEGENDARY !" : ""
     );
   return buf;
   #undef BUFSZ
