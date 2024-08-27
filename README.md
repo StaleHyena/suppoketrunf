@@ -42,3 +42,21 @@ demais jogadores, na qual somente a carta do topo é exposta ao mesmo.
  - Vence o jogador que atinge o objetivo de ter todas as cartas do jogo.
 
 ### Exemplo de rodada
+```
+Tua vez! teu pokemon é:
+	Skeledirge (Fire/Ghost): HP 104 ATK  75 DEF 100 SPATK 110 SPDEF  75
+Qual tua escolha? (1 - HP; 2 - ATK; 3 - DEF; 4 - SP. ATK; 5 - SP. DEF)
+4
+Jogador #1 selecionou a estatística SP. ATK!
+ - COMPARANDO -
+  #0: Sableye              (Dark/Ghost):        HP  50 ATK  75 DEF  75 SPATK  65 SPDEF  65 (SP. ATK 65)
+> #1: Skeledirge           (Fire/Ghost):        HP 104 ATK  75 DEF 100 SPATK 110 SPDEF  75 (SP. ATK 110) @
+  #2: Castform (Rainy Form) (Water):            HP  70 ATK  70 DEF  70 SPATK  70 SPDEF  70 (SP. ATK 70)
+
+	O vencedor dessa rodada é o jogador #1, com o pokemon Skeledirge
+```
+Nessa rodada o jogador que escolheu ganhou. A linha de quem escolheu começa com `>`, e a linha de quem ganhou termina com `@` nos relatórios de rodada.
+
+## Créditos:
+
+[Dataset](https://github.com/lgreski/pokemonData) - @lgreski
