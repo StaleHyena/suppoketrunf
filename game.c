@@ -23,9 +23,12 @@ player_free(player_t *p) {
 int player_extrahand(player_t* p) {
   if (!p->winnings) return 0;
   int total = 0;
-  for (stack_value_t pid = -1; p->winnings = stack_pop(p->winnings, &pid); total++) {
+  stack_value_t pid = -1;
+  do {
+    p->winnings = stack_pop(p->winnings, &pid);
     p->hand = stack_push(p->hand, pid);
-  }
+    total++;
+  } while (p->winnings);
   p->card_cnt = total;
   p->winnings = NULL;
   return total;
@@ -51,9 +54,18 @@ char *
 game_repr_sall(game_t* g) {
 #define GRMAX 8192
   static char buf[GRMAX] = {0};
+  size_t cards_with_players = 0;
+  size_t cards_on_table = stack_size(g->draw_winnings);
+  for (int i = 0; i < g->player_cnt; i++) {
+    player_t *p = g->players + i;
+    cards_with_players += stack_size(p->hand);
+    cards_with_players += stack_size(p->winnings);
+  }
   size_t off = 0;
-  off += snprintf(buf+off, GRMAX-off, "jogo com %d jogadores (%s):\n",
-      g->player_cnt, 
+  off += snprintf(buf+off, GRMAX-off, "jogo com %d jogadores, (%d+%d) cartas em jogo (%s):\n",
+      g->player_cnt,
+      cards_with_players,
+      cards_on_table,
       g->state == GAME_RUN? "rodando"
       : g->state == GAME_RUN_DRAW? "rodando (desempate)"
       : g->state == GAME_STOP? "parado"
@@ -94,6 +106,7 @@ void game_check_wincond(game_t *g) {
       g->state = GAME_STOP;
     }
     player_t *p = g->players + last_player_found;
+    assert(p->card_cnt + stack_size(p->winnings) == g->total_cards);
     printf("O jogador #%d ganhou esse jogo! Parabéns.\n", last_player_found);
     g->state = GAME_STOP;
   }
@@ -241,9 +254,11 @@ game_calc_round(game_t *g, int players_bitmask, stack_t winnings) {
     // Combine winnings
     if (old_q) {
       stack_value_t pid = -1;
-      while (old_q = stack_pop(old_q, &pid)) {
+      do {
+        old_q = stack_pop(old_q, &pid);
         winner->winnings = stack_push(winner->winnings, pid);
-      }
+      } while (old_q);
+      // and there'll be a leftover
     }
   }
   return r;

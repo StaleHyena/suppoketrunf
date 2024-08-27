@@ -41,7 +41,8 @@ stack_free(stack_t handle) {
 }
 
 size_t stack_size(stack_t s) {
-  size_t acc = 0;
+  if (!s) return 0;
+  size_t acc = 1;
   while(s->next) {
     s = s->next;
     acc++;
