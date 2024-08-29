@@ -1,7 +1,6 @@
 #include "game.h"
 
-player_t
-player_alloc(stack_t *take_pile, size_t card_cnt, player_driver_fptr driver) {
+player_t player_alloc(stack_t *take_pile, size_t card_cnt, player_driver_fptr driver) {
   player_t r = {0};
   for (r.card_cnt = 0; r.card_cnt < card_cnt; r.card_cnt++) {
     int pid;
@@ -13,8 +12,7 @@ player_alloc(stack_t *take_pile, size_t card_cnt, player_driver_fptr driver) {
   return r;
 }
 
-void
-player_free(player_t *p) {
+void player_free(player_t *p) {
   if (p->winnings) stack_free(p->winnings);
   if (p->hand) stack_free(p->hand);
 }
@@ -50,8 +48,7 @@ char *player_repr_sall(player_t* p) {
 #undef PRMAX
 }
 
-char *
-game_repr_sall(game_t* g) {
+char * game_repr_sall(game_t* g) {
 #define GRMAX 8192
   static char buf[GRMAX] = {0};
   size_t cards_with_players = 0;
@@ -120,12 +117,14 @@ typedef struct {
   stack_t winnings;
 } round_result_t;
 
-round_result_t
-game_calc_round(game_t *g, int players_bitmask, stack_t winnings) {
+round_result_t game_calc_round(game_t *g, int players_bitmask, stack_t winnings) {
   // Make sure the active player is part of the round
-  assert(BIT_GET(players_bitmask, g->player_active));
   
   round_result_t r = {0};
+  if(!BIT_GET(players_bitmask, g->player_active)){
+    printf("Todo mundo perdeu (descartes maligno)\n");
+    exit(EXIT_FAILURE);
+  }
 
   player_t *p2play = g->players + g->player_active;
   // The player takes his pick of stat
@@ -134,15 +133,13 @@ game_calc_round(game_t *g, int players_bitmask, stack_t winnings) {
   stack_peek(p2play->hand, &cpid);
   r.choice = p2play->driver(cpid);
   if (!r.choice) {
-    fprintf(stderr,
-        "Erro ao interpretar escolha do jogador #%d, cancelando round.\n",
+    printf("Erro ao interpretar escolha do jogador #%d, cancelando round.\n",
         g->player_active);
     g->state = GAME_CANCEL_ROUND;
     return r;
   } else if (r.choice < 0) {
-    fprintf(stderr,
-        "Jogador #%d saiu, encerrando jogo.\n",
-        g->player_active);
+    printf("Jogador #%d saiu, encerrando jogo.\n",
+      g->player_active);
     g->state = GAME_STOP;
     return r;
   }
@@ -176,13 +173,9 @@ game_calc_round(game_t *g, int players_bitmask, stack_t winnings) {
     winnings = stack_push(winnings, pid_store[i]);
     pokemon_stats_t ps = pokemon_stats[pid_store[i]];
 
+    // modular momento
     int val =
-        r.choice == 1? ps.hp
-      : r.choice == 2? ps.attack
-      : r.choice == 3? ps.defense
-      : r.choice == 4? ps.sp_attack
-      : r.choice == 5? ps.sp_defense
-      : -1;
+      (r.choice < sizeof(ps.stats)/sizeof(ps.stats[0]) && r.choice >= 0) ? ps.stats[r.choice-1] : -1;
 
     val_store[i] = val;
 
@@ -264,8 +257,7 @@ game_calc_round(game_t *g, int players_bitmask, stack_t winnings) {
   return r;
 }
 
-round_result_t
-game_resolve_draw(game_t *g) {
+round_result_t game_resolve_draw(game_t *g) {
   // which player should choose?
   int active_bak = g->player_active;
   int effective_active = g->player_active;
@@ -285,8 +277,7 @@ game_resolve_draw(game_t *g) {
   return r;
 }
 
-game_t
-game_new(stack_t (*gen_cards_f)(size_t size), player_driver_fptr *player_drivers, int player_cnt, int cards_per_player, long prng_seed) {
+game_t game_new(stack_t (*gen_cards_f)(size_t size), player_driver_fptr *player_drivers, int player_cnt, int cards_per_player, long prng_seed) {
   game_t g = {0};
   g.total_cards = player_cnt * cards_per_player;
   g.player_cnt = player_cnt;
@@ -307,12 +298,11 @@ game_new(stack_t (*gen_cards_f)(size_t size), player_driver_fptr *player_drivers
   return g;
 }
 
-void
-game_next_round(game_t *g) {
+void game_next_round(game_t *g) {
   round_result_t r = {0};
   
   if (!g->player_cnt) {
-    fprintf(stderr, "Jogo sem jogadores!\n");
+    printf("Jogo sem jogadores!\n");
     g->state = GAME_STOP;
     return;
   }
@@ -361,8 +351,7 @@ game_next_round(game_t *g) {
   }
 }
 
-void
-game_free(game_t *g) {
+void game_free(game_t *g) {
   if (g->draw_winnings) stack_free(g->draw_winnings);
 
   for (int i = 0; i < g->player_cnt; i++) {
